@@ -44,7 +44,8 @@
     "out/**",
     "pnpm-lock.yaml",
     "**/pnpm-lock.yaml",
-    "assets/**"
+    "assets/**",
+    "CHANGELOG.md"
   ],
 
   "overrides": [
