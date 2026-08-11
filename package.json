@@ -27,12 +27,12 @@
     "env:set:prod": "dotenvx set -f .env.production"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.50",
-    "@clerk/react": "^6.12.11",
+    "@clerk/express": "^2.1.52",
+    "@clerk/react": "^6.13.1",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@dotenvx/dotenvx": "^2.19.2",
+    "@dotenvx/dotenvx": "^2.21.0",
     "@fontsource-variable/cascadia-mono": "^5.3.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
@@ -63,23 +63,23 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "@vitest/coverage-v8": "^4.1.10",
     "oxfmt": "^0.63.0",
-    "oxlint": "^1.77.0",
+    "oxlint": "^1.78.0",
     "semantic-release": "25.0.9",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.6",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=26.0.0",
     "pnpm": ">=11.9.0"
   },
-  "packageManager": "pnpm@11.20.0"
+  "packageManager": "pnpm@11.21.0"
 }
