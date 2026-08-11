@@ -9,3 +9,4 @@ bumps the version (from the merged PR title / squash commit message).
 
 - **v1.0.0** `chore` [#1](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/1): chore/initial scaffold
 - **v1.0.1** `chore` [#3](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/3): fix/changelog oxfmt
+- **v1.0.2** `chore` [#4](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/4): fix/pm2 dotenvx bootstrap
