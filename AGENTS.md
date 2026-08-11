@@ -41,5 +41,9 @@ Private keys are in `.env.keys` / `DOTENV_PRIVATE_KEY_*` (gitignored — never c
 - `CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 
-Scripts load the matching file via dotenvx: `pnpm dev` → `.env.development`;
-`pnpm run build` / `pnpm start` → `.env.production`.
+Scripts load env as follows:
+
+- Server (`pnpm start` / `dev:server`): decrypts encrypted `.env.*` in-process via
+  `@dotenvx/dotenvx` (needs `.env.keys` or `DOTENV_PRIVATE_KEY_*` in the environment).
+- Client / Vite build: still uses `dotenvx run -f .env.*` so `VITE_*` keys decrypt at
+  build/dev time.

@@ -2,6 +2,67 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { config as loadEnv } from '@dotenvx/dotenvx';
+
+function resolveEnvFilePath(projectRoot: string): string | null {
+  const normalizedNodeEnv = (process.env.NODE_ENV ?? '').trim().toLowerCase();
+
+  if (normalizedNodeEnv === 'test') {
+    const testPath = path.join(projectRoot, '.env.test');
+    return fs.existsSync(testPath) ? testPath : null;
+  }
+
+  const envFileByMode: Record<string, string> = {
+    production: '.env.production',
+    development: '.env.development',
+  };
+  const prioritizedFiles = [
+    envFileByMode[normalizedNodeEnv],
+    '.env.production',
+    '.env.development',
+  ].filter((value, index, values): value is string => {
+    return typeof value === 'string' && values.indexOf(value) === index;
+  });
+
+  for (const fileName of prioritizedFiles) {
+    const candidatePath = path.join(projectRoot, fileName);
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+  return null;
+}
+
+function assertNotEncrypted(name: string, value: string): void {
+  if (value.startsWith('encrypted:')) {
+    throw new Error(
+      `[FATAL] ${name} is still encrypted. Ensure .env.keys / DOTENV_PRIVATE_KEY_* is available.`,
+    );
+  }
+}
+
+const cwdRoot = process.cwd();
+const envKeysPath = path.join(cwdRoot, '.env.keys');
+if (fs.existsSync(envKeysPath)) {
+  try {
+    loadEnv({ path: envKeysPath, quiet: true });
+  } catch (error) {
+    console.error(`[Config] Failed to load environment keys from "${envKeysPath}".`, error);
+    throw error;
+  }
+}
+
+const envPath = resolveEnvFilePath(cwdRoot);
+if (envPath) {
+  try {
+    // Overload so PM2/node --env-file ciphertext is replaced with decrypted values.
+    loadEnv({ path: envPath, quiet: true, overload: true });
+  } catch (error) {
+    console.error(`[Config] Failed to load environment via loadEnv from "${envPath}".`, error);
+    throw error;
+  }
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const parentName = path.basename(path.resolve(__dirname, '..'));
@@ -34,8 +95,18 @@ export const SECURE_COOKIES =
 export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN;
 export const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME?.trim() || `${APP_ID}.sid`;
 
-export const CLERK_PUBLISHABLE_KEY = process.env.CLERK_PUBLISHABLE_KEY?.trim() || '';
-export const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY?.trim() || '';
+const clerkPublishable =
+  process.env.CLERK_PUBLISHABLE_KEY?.trim() || process.env.VITE_CLERK_PUBLISHABLE_KEY?.trim() || '';
+const clerkSecret = process.env.CLERK_SECRET_KEY?.trim() || '';
+
+if (NODE_ENV === 'production') {
+  assertNotEncrypted('CLERK_PUBLISHABLE_KEY', clerkPublishable);
+  assertNotEncrypted('CLERK_SECRET_KEY', clerkSecret);
+  assertNotEncrypted('SESSION_SECRET', SESSION_SECRET);
+}
+
+export const CLERK_PUBLISHABLE_KEY = clerkPublishable;
+export const CLERK_SECRET_KEY = clerkSecret;
 export const CLERK_CONFIGURED = Boolean(CLERK_PUBLISHABLE_KEY && CLERK_SECRET_KEY);
 
 export const LEGAL_PAGE_URL =
@@ -44,9 +115,7 @@ export const LEGAL_PAGE_URL =
   'https://darkavianlabs.com/legal/';
 
 export function ensureDataDirs(): void {
-  for (const dir of [DATA_DIR]) {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(path.dirname(path.resolve(SESSION_DB_PATH)), { recursive: true });
+  fs.mkdirSync(path.dirname(path.resolve(APP_DB_PATH)), { recursive: true });
 }

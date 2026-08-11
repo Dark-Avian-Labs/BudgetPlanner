@@ -70,7 +70,7 @@ unless you manage it carefully on the server).
 | `pnpm dev`              | Vite + watched Express (via dotenvx)           |
 | `pnpm run validate`     | preflight → format → lint → typecheck → test   |
 | `pnpm run build`        | production build                               |
-| `pnpm start`            | serve production build (via dotenvx)           |
+| `pnpm start`            | serve production build (in-process dotenvx)    |
 | `pnpm run env:encrypt`  | Encrypt `.env.development` + `.env.production` |
 | `pnpm run env:decrypt`  | Decrypt both for local editing                 |
 | `pnpm run env:set:dev`  | Set an encrypted key in `.env.development`     |

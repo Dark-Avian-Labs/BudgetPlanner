@@ -25,7 +25,6 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'favicon.ico'
-      - 'ecosystem.config.cjs'
       - '.env.production'
       - '.releaserc.json'
       - '.github/workflows/ci.yml'
@@ -280,7 +279,6 @@ jobs:
           cp -r dist/ /tmp/deploy/
           if [ -d icons ]; then cp -r icons/ /tmp/deploy/; fi
           cp package.json pnpm-lock.yaml pnpm-workspace.yaml /tmp/deploy/
-          if [ -f ecosystem.config.cjs ]; then cp ecosystem.config.cjs /tmp/deploy/; fi
           if [ -f .env.production ]; then cp .env.production /tmp/deploy/; fi
           if [ -f favicon.ico ]; then cp favicon.ico /tmp/deploy/; fi
           printf 'DOTENV_PRIVATE_KEY_PRODUCTION=%s\n' "$DOTENV_PRIVATE_KEY_PRODUCTION" > /tmp/deploy/.env.keys
