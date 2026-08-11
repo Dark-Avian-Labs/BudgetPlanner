@@ -29,6 +29,7 @@ import {
 import { createAppSchema } from './db/appSchema.js';
 import { closeAppDb, getAppDb, getSessionDb } from './db/connection.js';
 import { createSessionSchema } from './db/sessionSchema.js';
+import { createAppHelmet } from './http/helmetCsp.js';
 import { apiRouter } from './routes/api.js';
 
 const require = createRequire(import.meta.url);
@@ -52,11 +53,13 @@ if (NODE_ENV === 'production' && SECURE_COOKIES && !TRUST_PROXY) {
 }
 
 app.use(
-  helmet({
-    // Plain HTTP LAN / local: avoid HTTPS upgrades and CSP that blocks Clerk CDN.
-    hsts: SECURE_COOKIES ? undefined : false,
-    contentSecurityPolicy: SECURE_COOKIES ? undefined : false,
-  }),
+  SECURE_COOKIES
+    ? createAppHelmet()
+    : helmet({
+        // Plain HTTP LAN / local: avoid HTTPS upgrades and CSP that blocks Clerk.
+        hsts: false,
+        contentSecurityPolicy: false,
+      }),
 );
 
 app.use(express.json({ limit: '10mb' }));
