@@ -1,0 +1,8 @@
+# Changelog
+
+Notable work on `main` is summarized **by merged pull request**, one line each.
+
+From the next release onward, CI appends new lines automatically when semantic-release
+bumps the version (from the merged PR title / squash commit message).
+
+## Pull requests (oldest → newest)
