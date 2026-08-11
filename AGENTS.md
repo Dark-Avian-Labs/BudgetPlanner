@@ -1,49 +1,17 @@
-# BudgetPlanner
+# Codex
 
-Household budget planner (Express + React/Vite). Styling is loosely adapted from AppBase / DAL glass tokens.
+## Org standards
+
+Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, validate, release tracks, OpenWiki) live in AppBase [`docs/org-standards/`](../AppBase/docs/org-standards/). Prefer those docs when aligning workflows or quality gates.
 
 ## OpenWiki
 
-Not initialized yet. Prefer `README.md` and this file until OpenWiki is added.
+This repository has documentation located in the /openwiki directory.
 
-## Stack
+Start here:
 
-- Node >= 26, pnpm >= 11
-- Express 5, SQLite (`better-sqlite3`) for sessions + app data
-- React 19, Vite, Tailwind v4, Clerk (`@clerk/react` v6 / Core 3)
-- i18next (`en` / `de`), `Intl` for money/dates
-- Quality: oxlint, oxfmt, `pnpm run validate`
+- [OpenWiki quickstart](openwiki/quickstart.md)
 
-## Domain
+OpenWiki includes repository overview, architecture notes, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
 
-- **Plan** → categories, accounts, entries, members, invites
-- Entry `kind`: expense | income | credit
-- Entry `frequency`: monthly | quarterly | halfyearly | yearly | once (`due_day`; `due_month` for non-monthly; `due_year` for once)
-- One-time (`once`): due only in that year/month; auto-deleted when the calendar month ends
-- Credit: `end_date`, `final_amount_cents`
-- Totals: **due this month** only (not monthly-equivalent averaging)
-- Roles: owner | editor | viewer; invites by email (copy link + mailto)
-
-## UI conventions
-
-- Mobile-first, icon-first chrome (Material Symbols)
-- Frequency: calendar icon + `1` / `3` / `12`
-- Tap entry → details → Edit; Organize mode for reorder
-- Clerk: use `Show when="signed-in|signed-out"` (not legacy SignedIn/SignedOut)
-
-## Auth env
-
-Shared DAL Clerk application (same as Armory / other DAL apps). Secrets live in
-**encrypted** `.env.development` / `.env.production` (committed).
-Private keys are in `.env.keys` / `DOTENV_PRIVATE_KEY_*` (gitignored — never commit).
-
-- `VITE_CLERK_PUBLISHABLE_KEY`
-- `CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-
-Scripts load env as follows:
-
-- Server (`pnpm start` / `dev:server`): decrypts encrypted `.env.*` in-process via
-  `@dotenvx/dotenvx` (needs `.env.keys` or `DOTENV_PRIVATE_KEY_*` in the environment).
-- Client / Vite build: still uses `dotenvx run -f .env.*` so `VITE_*` keys decrypt at
-  build/dev time.
+When working in this repository, read the OpenWiki quickstart first, then follow its links to the relevant architecture, workflow, domain, operation, and testing notes.
