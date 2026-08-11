@@ -1,0 +1,74 @@
+import i18n from 'i18next';
+
+import { apiJson } from '../utils/api';
+
+export const LOCALES = ['en', 'de'] as const;
+export type AppLocale = (typeof LOCALES)[number];
+
+const STORAGE_KEY = 'budgetplanner.locale';
+
+export function isAppLocale(value: string | null | undefined): value is AppLocale {
+  return value === 'en' || value === 'de';
+}
+
+export function readStoredLocale(): AppLocale | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return isAppLocale(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredLocale(locale: AppLocale): void {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, locale);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+export function resolveInitialLocale(): AppLocale {
+  if (typeof window === 'undefined') return 'en';
+  const stored = readStoredLocale();
+  if (stored) return stored;
+  const nav = window.navigator.language?.toLowerCase() ?? '';
+  if (nav.startsWith('de')) return 'de';
+  return 'en';
+}
+
+export async function applyLocale(locale: AppLocale): Promise<void> {
+  writeStoredLocale(locale);
+  document.documentElement.lang = locale;
+  if (!i18n.language.startsWith(locale)) {
+    await i18n.changeLanguage(locale);
+  }
+}
+
+/** Persist locally and, when signed in, to the user profile. */
+export async function setUserLocale(locale: AppLocale, syncRemote: boolean): Promise<void> {
+  await applyLocale(locale);
+  if (!syncRemote) return;
+  try {
+    await apiJson('/api/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ locale }),
+    });
+  } catch {
+    // Local preference still saved; remote sync can retry next visit
+  }
+}
+
+/** Prefer server locale when available; otherwise keep local/browser choice. */
+export async function syncLocaleFromServer(): Promise<void> {
+  try {
+    const me = await apiJson<{ locale?: string }>('/api/me');
+    if (isAppLocale(me.locale)) {
+      await applyLocale(me.locale);
+      return;
+    }
+  } catch {
+    // not signed in or API unavailable
+  }
+  await applyLocale(resolveInitialLocale());
+}

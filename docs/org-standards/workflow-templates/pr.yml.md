@@ -1,0 +1,47 @@
+# Example PR checks (Node/TS)
+
+```yaml
+name: <App> PR Checks
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: 26
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: useblacksmith/checkout@v1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        # Or: uses: ./.github/actions/pnpm-install-fresh
+
+      - name: Run quality checks
+        run: pnpm run validate
+
+      - name: Build project
+        run: pnpm run build
+```

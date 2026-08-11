@@ -1,0 +1,16 @@
+node_modules/
+dist/
+data/
+_resources/
+
+# dotenvx — private decryption keys must never be committed
+.env.keys
+.env.keys.*
+
+# Optional plaintext local overrides (not encrypted)
+.env.local
+.env.*.local
+
+# Unused local Inter font dump (app uses @fontsource-variable)
+assets/inter/
+

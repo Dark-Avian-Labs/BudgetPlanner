@@ -1,0 +1,360 @@
+name: BudgetPlanner CI/CD
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: 26
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'client/**'
+      - 'assets/**'
+      - 'index.html'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig*.json'
+      - 'vite.config.ts'
+      - 'vitest.config.ts'
+      - 'run-quality-checks.mjs'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'favicon.ico'
+      - 'ecosystem.config.cjs'
+      - '.env.production'
+      - '.releaserc.json'
+      - '.github/workflows/ci.yml'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deployment-check:
+    if: ${{ !contains(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, 'build(release)') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+
+    steps:
+      - name: Checkout full history
+        uses: useblacksmith/checkout@v1
+        with:
+          fetch-depth: 0
+
+      - name: Check if changes require deployment
+        id: decide
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE"^{commit} 2>/dev/null; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Reason: Missing or invalid before commit"
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "$BEFORE" "$AFTER")
+          echo "Changed files:"
+          echo "$changed_files"
+
+          if [ -z "$changed_files" ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Reason: No files changed"
+            exit 0
+          fi
+
+          others=$(echo "$changed_files" | grep -vE '(^|/)package\.json$|(^|/)pnpm-lock\.yaml$' || true)
+
+          if [ -n "$others" ]; then
+            echo "Other files changed:"
+            echo "$others"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Reason: Non-package files changed"
+            exit 0
+          fi
+
+          tmp_old=$(mktemp)
+          tmp_new=$(mktemp)
+          tmp_sub_old=$(mktemp)
+          tmp_sub_new=$(mktemp)
+
+          prod_subset() {
+            jq -cS '{
+              dependencies: (.dependencies // {}),
+              optionalDependencies: (.optionalDependencies // {}),
+              peerDependencies: (.peerDependencies // {})
+            }'
+          }
+
+          while IFS= read -r pkg; do
+            [ -z "$pkg" ] && continue
+            git show "$BEFORE:$pkg" 2>/dev/null > "$tmp_old" || echo '{}' > "$tmp_old"
+            git show "$AFTER:$pkg" 2>/dev/null > "$tmp_new" || echo '{}' > "$tmp_new"
+            prod_subset < "$tmp_old" > "$tmp_sub_old"
+            prod_subset < "$tmp_new" > "$tmp_sub_new"
+            if ! cmp -s "$tmp_sub_old" "$tmp_sub_new"; then
+              rm -f "$tmp_old" "$tmp_new" "$tmp_sub_old" "$tmp_sub_new"
+              echo "deploy=true" >> "$GITHUB_OUTPUT"
+              echo "Reason: Production-style dependencies changed in $pkg"
+              exit 0
+            fi
+          done < <(echo "$changed_files" | grep -E '(^|/)package\.json$' || true)
+
+          rm -f "$tmp_old" "$tmp_new" "$tmp_sub_old" "$tmp_sub_new"
+
+          echo "deploy=false" >> "$GITHUB_OUTPUT"
+          echo "Reason: Only devDependencies, lockfile, or non-runtime package.json edits"
+
+  version:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+
+    needs: [deployment-check]
+    if: ${{ needs.deployment-check.outputs.deploy == 'true' && !contains(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, 'build(release)') }}
+
+    permissions:
+      contents: write
+    outputs:
+      target_sha: ${{ steps.target.outputs.sha }}
+
+    steps:
+      - name: Checkout full history
+        uses: useblacksmith/checkout@v1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CI_PAT }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies (fresh lockfile)
+        uses: ./.github/actions/pnpm-install-fresh
+
+      - name: Bump version
+        run: pnpm exec semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          MERGE_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+      - name: Resolve deployment target SHA
+        id: target
+        shell: bash
+        run: |
+          git fetch origin main
+          echo "sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+
+  validate:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+
+    needs: [deployment-check, version]
+    if: needs.deployment-check.outputs.deploy == 'true'
+
+    steps:
+      - name: Checkout release target
+        uses: useblacksmith/checkout@v1
+        with:
+          ref: ${{ needs.version.outputs.target_sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies (fresh lockfile)
+        uses: ./.github/actions/pnpm-install-fresh
+
+      - name: Run quality checks
+        run: pnpm run validate
+
+  build-and-deploy:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+
+    needs: [deployment-check, version, validate]
+    if: needs.deployment-check.outputs.deploy == 'true'
+
+    steps:
+      - name: Checkout release target
+        uses: useblacksmith/checkout@v1
+        with:
+          ref: ${{ needs.version.outputs.target_sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies (fresh lockfile)
+        uses: ./.github/actions/pnpm-install-fresh
+
+      - name: Build project
+        env:
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+        run: |
+          if [ -z "$DOTENV_PRIVATE_KEY_PRODUCTION" ]; then
+            echo "ERROR: DOTENV_PRIVATE_KEY_PRODUCTION secret is missing or empty."
+            exit 1
+          fi
+          pnpm exec dotenvx run --strict -f .env.production -- pnpm run build
+
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_KNOWN_HOST: ${{ secrets.SERVER_KNOWN_HOST }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+          SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+        run: |
+          require_non_empty() {
+            name="$1"
+            value="$2"
+            if [ -z "$value" ]; then
+              echo "ERROR: $name is missing or empty."
+              exit 1
+            fi
+          }
+
+          require_non_empty "SSH_PRIVATE_KEY" "$SSH_PRIVATE_KEY"
+          require_non_empty "SERVER_KNOWN_HOST" "$SERVER_KNOWN_HOST"
+          require_non_empty "SERVER_HOST" "$SERVER_HOST"
+          require_non_empty "SERVER_USER" "$SERVER_USER"
+          require_non_empty "SERVER_PATH" "$SERVER_PATH"
+
+          case "$SERVER_PATH" in
+            ""|"/"|"."|".."|"~"|"~/"|"/home"|"/root")
+              echo "ERROR: SERVER_PATH has unsafe value: '$SERVER_PATH'"
+              exit 1
+              ;;
+          esac
+          case "$SERVER_PATH" in
+            "~"*|*".."*|*"/./"*|*"/../"*|*"//"*)
+              echo "ERROR: SERVER_PATH contains unsafe path segments: '$SERVER_PATH'"
+              exit 1
+              ;;
+          esac
+
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -z "$SERVER_SSH_PORT" ]; then
+            echo "ERROR: SERVER_SSH_PORT secret is missing or empty."
+            exit 1
+          fi
+          echo "$SERVER_KNOWN_HOST" >> ~/.ssh/known_hosts
+
+      - name: Prepare deployment
+        env:
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+        run: |
+          mkdir -p /tmp/deploy
+          cp -r dist/ /tmp/deploy/
+          if [ -d icons ]; then cp -r icons/ /tmp/deploy/; fi
+          cp package.json pnpm-lock.yaml pnpm-workspace.yaml /tmp/deploy/
+          if [ -f ecosystem.config.cjs ]; then cp ecosystem.config.cjs /tmp/deploy/; fi
+          if [ -f .env.production ]; then cp .env.production /tmp/deploy/; fi
+          if [ -f favicon.ico ]; then cp favicon.ico /tmp/deploy/; fi
+          printf 'DOTENV_PRIVATE_KEY_PRODUCTION=%s\n' "$DOTENV_PRIVATE_KEY_PRODUCTION" > /tmp/deploy/.env.keys
+          chmod 600 /tmp/deploy/.env.keys
+          test -s /tmp/deploy/.env.keys || { echo "ERROR: Failed to create .env.keys in deployment bundle."; exit 1; }
+          cd /tmp/deploy && pnpm install --prod
+
+      - name: Deploy to server
+        env:
+          SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          rsync -av --no-times --delete \
+                --exclude='.env' \
+                --exclude='.env.local' \
+                --exclude='logs/' \
+                --exclude='data/' \
+                --exclude='.env.keys' \
+                --chmod=D2770,F640 \
+                --omit-dir-times \
+                -e "ssh -p $SERVER_SSH_PORT -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts" \
+                /tmp/deploy/ \
+                "$SERVER_USER@$SERVER_HOST:$SERVER_PATH/"
+
+          rsync -av --no-times \
+                --chmod=F600 \
+                --omit-dir-times \
+                -e "ssh -p $SERVER_SSH_PORT -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts" \
+                /tmp/deploy/.env.keys \
+                "$SERVER_USER@$SERVER_HOST:$SERVER_PATH/.env.keys"
+
+      - name: Update permissions
+        env:
+          SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          ssh -p "$SERVER_SSH_PORT" -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "$SERVER_USER@$SERVER_HOST" \
+              "/usr/local/bin/pm2-chown-tree $SERVER_PATH"
+
+      - name: Restart PM2
+        env:
+          SERVER_SSH_PORT: ${{ secrets.SERVER_SSH_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          ssh -p "$SERVER_SSH_PORT" -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=yes \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              "$SERVER_USER@$SERVER_HOST" \
+              "/usr/local/bin/pm2-restart-safe BudgetPlanner"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  discord-status:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    needs: [deployment-check, version, validate, build-and-deploy]
+    if: ${{ always() && github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Send Discord status
+        uses: iShark5060/actions-discord-status@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          job_results: ${{ join(needs.*.result, ',') }}
+          mention_on: failure
+          content: '<@${{ secrets.DISCORD_USERID }}>'
+          title: ${{ github.workflow}}
+          description: ${{ contains(needs.*.result, 'failure') && 'CI failed. Please review logs before redeploying.' || contains(needs.*.result, 'cancelled') && 'CI was cancelled before completion.' || needs.deployment-check.outputs.deploy == 'false' && 'CI was skipped because deployment-check determined no deployable changes.' || contains(needs.*.result, 'skipped') && 'CI was skipped due to upstream conditions.' || 'CI succeeded. New build is deployed and available now.' }}
