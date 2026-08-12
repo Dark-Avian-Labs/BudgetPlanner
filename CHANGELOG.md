@@ -12,3 +12,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.0.2** `chore` [#4](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/4): fix/pm2 dotenvx bootstrap
 - **v1.0.3** `chore` [#5](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/5): fix/clerk csp helmet
 - **v1.0.4** `chore(deps)`: update dependencies to latest versions
+- **v1.0.5** `chore` [#6](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/6): dependabot/npm_and_yarn/production dependencies e36323cc78
