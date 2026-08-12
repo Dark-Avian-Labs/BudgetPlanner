@@ -3,6 +3,7 @@
   "version": "1.0.5",
   "private": true,
   "description": "Household budget planner — shared recurring expenses, mobile-first",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "typecheck": "pnpm run typecheck:server && pnpm run typecheck:client",
