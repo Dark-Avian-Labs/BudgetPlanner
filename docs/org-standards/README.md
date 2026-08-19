@@ -1,6 +1,6 @@
 # Dark Avian Labs org standards
 
-Canonical engineering conventions for DAL application repositories. Copy patterns from here into sibling apps (same mirror model as the design system — no shared npm package or org-level reusable workflow package yet).
+Canonical engineering conventions for DAL application repositories. Copy patterns from here into sibling apps. Same mirror model as the design system: no shared npm package or org-level reusable workflow package yet.
 
 ## Documents
 

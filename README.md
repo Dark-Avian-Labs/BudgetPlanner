@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?logo=tailwindcss&logoColor=white)
 [![Cursor](https://img.shields.io/badge/Cursor-IDE-141414?logo=cursor&logoColor=white)](https://cursor.com)
 
-BudgetPlanner is a mobile-first household budget planner for shared recurring expenses, income, and credits. Sign-in, access control, and plan invites use [Clerk](https://clerk.com) directly.
+BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Invite someone by email with view or edit access. This-month totals only count what is due in the current calendar month. Sign-in uses [Clerk](https://clerk.com). English is the default locale, with German ready to go.
 
 ## Features
 
