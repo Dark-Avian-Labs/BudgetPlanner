@@ -27,7 +27,6 @@ const TYPE_BASE_OPACITY: Record<HexType, number> = {
   3: 0.1,
 };
 
-/** Layout from codepen/css — scattered hexes clipped at the panel edge. */
 const HEX_LAYOUT: HexSpec[] = [
   { height: 154, left: 193, top: 181, type: 1 },
   { height: 154, left: 193, top: 346, type: 2 },

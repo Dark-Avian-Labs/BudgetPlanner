@@ -55,7 +55,6 @@ if (fs.existsSync(envKeysPath)) {
 const envPath = resolveEnvFilePath(cwdRoot);
 if (envPath) {
   try {
-    // Overload so PM2/node --env-file ciphertext is replaced with decrypted values.
     loadEnv({ path: envPath, quiet: true, overload: true });
   } catch (error) {
     console.error(`[Config] Failed to load environment via loadEnv from "${envPath}".`, error);

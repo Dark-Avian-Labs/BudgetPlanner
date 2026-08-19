@@ -8,8 +8,6 @@ import { defineConfig, loadEnv } from 'vite';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  // Prefer process.env (injected by `dotenvx run`) over raw .env file values,
-  // which may be ciphertext when encryption is enabled.
   const fileEnv = loadEnv(mode, process.cwd(), '');
   const envValue = (key: string, fallback = '') =>
     process.env[key]?.trim() || fileEnv[key]?.trim() || fallback;

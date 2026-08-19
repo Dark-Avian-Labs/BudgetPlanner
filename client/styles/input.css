@@ -2,10 +2,6 @@
 @import '@fontsource-variable/cascadia-mono';
 @import '@fontsource-variable/material-symbols-rounded';
 
-/*
- * Variable Fontsource packages don't ship subset CSS — a full @import copies every
- * script into dist. For en/de we only need latin (same approach for Inter + Geist).
- */
 @font-face {
   font-family: 'Inter Variable';
   font-style: normal;
@@ -374,7 +370,6 @@ html.ui-clear:not(.dark) {
     background: color-mix(in oklab, var(--color-glass) 75%, transparent);
   }
 
-  /* Dialogs need to scroll; glass surfaces default to overflow:hidden. */
   .modal.glass-modal-surface {
     overflow: visible;
   }
@@ -1534,7 +1529,6 @@ html.ui-clear .stale-update-banner::after {
   display: none;
 }
 
-/* Budget plan entry rows */
 .entry-row__name {
   color: var(--color-foreground);
 }
@@ -1674,7 +1668,6 @@ html.ui-clear .stale-update-banner::after {
   color: var(--color-muted);
 }
 
-/* Print sheet — plain paper look on screen + print */
 .print-sheet {
   display: flex;
   flex-direction: column;

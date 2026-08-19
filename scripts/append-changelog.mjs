@@ -55,7 +55,6 @@ if (!content.endsWith('\n')) {
   content += '\n';
 }
 
-// oxfmt markdown wants a blank line after ATX headings before a list.
 const lines = content.replace(/\s+$/u, '').split('\n');
 const lastLine = lines[lines.length - 1] ?? '';
 if (/^#{1,6}\s/u.test(lastLine)) {

@@ -27,7 +27,6 @@ function parseIsoDate(iso: string): { year: number; month: number; day: number }
   return { year, month, day };
 }
 
-/** Whether a recurring entry is due in the given calendar month (1–12). */
 export function isDueInMonth(
   entry: Pick<DueEntryInput, 'frequency' | 'due_month' | 'due_year' | 'end_date'>,
   year: number,
@@ -63,7 +62,6 @@ export function isDueInMonth(
   return false;
 }
 
-/** Amount that applies for the given month (handles credit final installment). */
 export function amountForMonth(entry: DueEntryInput, year: number, month: number): number | null {
   if (!isDueInMonth(entry, year, month)) return null;
 
@@ -110,7 +108,6 @@ export function frequencyMonths(frequency: EntryFrequency): 1 | 3 | 6 | 12 | 0 {
   return 12;
 }
 
-/** True when a one-time entry's calendar month is strictly before year/month. */
 export function isOnceEntryExpired(
   entry: Pick<DueEntryInput, 'frequency' | 'due_month' | 'due_year'>,
   year: number,

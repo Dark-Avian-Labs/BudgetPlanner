@@ -19,13 +19,11 @@ export function formatMoney(
 }
 
 export function formatDueDay(day: number, locale: string): string {
-  // Prefer compact day label; German docs used "01." style
   const padded = String(day).padStart(2, '0');
   if (locale.startsWith('de')) return `${padded}.`;
   return padded;
 }
 
-/** Numeric day+month, e.g. de: "10.08." / en: "10/08". */
 export function formatDueMonthDay(month: number, day: number, locale: string): string {
   const d = String(day).padStart(2, '0');
   const m = String(month).padStart(2, '0');

@@ -86,7 +86,6 @@ export function Layout() {
   }, [settingsMenuOpen]);
 
   async function chooseLocale(lng: AppLocale) {
-    // Persist locally always; PATCH /api/me when Clerk is configured (no-op if signed out).
     await setUserLocale(lng, clerkEnabled);
     setSettingsMenuOpen(false);
   }

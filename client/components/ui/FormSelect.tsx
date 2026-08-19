@@ -13,11 +13,9 @@ interface FormSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  /** Prefer floating inside modals so the menu isn’t clipped. */
   placement?: 'attached' | 'floating';
 }
 
-/** Label + SelectDropdown using the same trigger chrome as the theme picker. */
 export function FormSelect({
   label,
   value,

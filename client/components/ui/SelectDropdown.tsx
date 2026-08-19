@@ -14,7 +14,6 @@ import { MaterialSymbol } from './MaterialSymbol';
 export interface SelectDropdownOption {
   value: string;
   label: string;
-  /** Optional CSS class for a leading color swatch (e.g. account-swatch--rose). */
   swatchClass?: string;
 }
 

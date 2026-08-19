@@ -1,4 +1,3 @@
-/** Client-side mirror of server due-this-month rules for list highlighting. */
 import type { Entry, EntryFrequency } from './types';
 
 function parseIsoDate(iso: string): { year: number; month: number } | null {

@@ -56,7 +56,6 @@ app.use(
   SECURE_COOKIES
     ? createAppHelmet()
     : helmet({
-        // Plain HTTP LAN / local: avoid HTTPS upgrades and CSP that blocks Clerk.
         hsts: false,
         contentSecurityPolicy: false,
       }),

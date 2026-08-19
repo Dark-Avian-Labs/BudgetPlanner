@@ -67,7 +67,6 @@ function parseMonthQuery(req: Request): { year: number; month: number } {
   return { year, month: Math.min(12, Math.max(1, month)) };
 }
 
-/** Drop one-time entries whose due month is already over (wall-clock). */
 function purgeExpiredOnceEntries(db: ReturnType<typeof getAppDb>, planId?: string): void {
   const now = new Date();
   const year = now.getFullYear();
@@ -224,7 +223,6 @@ plansRouter.patch('/:planId', requirePlanAccess('editor'), (req: Request, res: R
   res.json({ plan: updated });
 });
 
-// Categories
 plansRouter.post(
   '/:planId/categories',
   requirePlanAccess('editor'),
@@ -298,7 +296,6 @@ plansRouter.delete(
   },
 );
 
-// Accounts
 plansRouter.post(
   '/:planId/accounts',
   requirePlanAccess('editor'),

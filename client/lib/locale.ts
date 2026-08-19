@@ -24,7 +24,7 @@ export function writeStoredLocale(locale: AppLocale): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, locale);
   } catch {
-    // ignore quota / private mode
+    // ignore
   }
 }
 
@@ -45,7 +45,6 @@ export async function applyLocale(locale: AppLocale): Promise<void> {
   }
 }
 
-/** Persist locally and, when signed in, to the user profile. */
 export async function setUserLocale(locale: AppLocale, syncRemote: boolean): Promise<void> {
   await applyLocale(locale);
   if (!syncRemote) return;
@@ -55,11 +54,10 @@ export async function setUserLocale(locale: AppLocale, syncRemote: boolean): Pro
       body: JSON.stringify({ locale }),
     });
   } catch {
-    // Local preference still saved; remote sync can retry next visit
+    // ignore
   }
 }
 
-/** Prefer server locale when available; otherwise keep local/browser choice. */
 export async function syncLocaleFromServer(): Promise<void> {
   try {
     const me = await apiJson<{ locale?: string }>('/api/me');
@@ -68,7 +66,7 @@ export async function syncLocaleFromServer(): Promise<void> {
       return;
     }
   } catch {
-    // not signed in or API unavailable
+    // ignore
   }
   await applyLocale(resolveInitialLocale());
 }

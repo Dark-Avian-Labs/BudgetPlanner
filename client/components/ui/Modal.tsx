@@ -22,7 +22,6 @@ export function Modal({ open, onClose, children, className, ariaLabelledBy }: Mo
     setMounted(true);
   }, []);
 
-  /** Keep the overlay inside the visible viewport (soft keyboard / mobile chrome). */
   useEffect(() => {
     if (!open || typeof window === 'undefined') return undefined;
 
@@ -83,7 +82,6 @@ export function Modal({ open, onClose, children, className, ariaLabelledBy }: Mo
     const handleFocusIn = (event: FocusEvent) => {
       const target = event.target;
       if (!(target instanceof HTMLElement) || !modalElement.contains(target)) return;
-      // Keep focused fields visible above the soft keyboard.
       requestAnimationFrame(() => {
         target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       });

@@ -105,7 +105,6 @@ export function createAppSchema(db: Database.Database): void {
   migrateEntriesOnceFrequency(db);
 }
 
-/** Add accounts.color and assign distinct palette tokens to existing rows. */
 function migrateAccountsColor(db: Database.Database): void {
   const cols = db.prepare(`PRAGMA table_info(accounts)`).all() as Array<{ name: string }>;
   if (cols.some((c) => c.name === 'color')) return;
@@ -129,7 +128,6 @@ function migrateAccountsColor(db: Database.Database): void {
   tx();
 }
 
-/** Rebuild entries CHECK so existing DBs accept halfyearly (SQLite can't ALTER CHECK). */
 function migrateEntriesHalfyearlyFrequency(db: Database.Database): void {
   const row = db
     .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'entries'`)
@@ -139,7 +137,6 @@ function migrateEntriesHalfyearlyFrequency(db: Database.Database): void {
   rebuildEntriesTable(db, /* includeOnce */ false);
 }
 
-/** Accept frequency=once and add due_year for one-time entries. */
 function migrateEntriesOnceFrequency(db: Database.Database): void {
   const row = db
     .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'entries'`)
