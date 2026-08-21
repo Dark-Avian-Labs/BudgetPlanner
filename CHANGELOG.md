@@ -19,3 +19,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.0.9** `chore(deps)`: update @clerk/express to 2.1.58, @clerk/react to 6.14.4, and bump vitest and coverage packages to 4.1.11
 - **v1.0.10** `chore`: Merge branch 'main' of https://github.com/Dark-Avian-Labs/BudgetPlanner
 - **v1.0.11** `chore(deps)` [#10](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/10): bump @clerk/express in the production-dependencies group
+- **v1.1.0** `chore` [#11](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/11): feat/acrylic theme and hex sides
