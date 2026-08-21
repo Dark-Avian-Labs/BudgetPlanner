@@ -1,6 +1,6 @@
 {
   "name": "budget-planner",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "private": true,
   "description": "Household budget planner — shared recurring expenses, mobile-first",
   "license": "MIT",
