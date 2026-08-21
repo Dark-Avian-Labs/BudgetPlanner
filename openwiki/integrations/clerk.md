@@ -20,7 +20,7 @@ Files under `client/clerk/`:
 
 | File                 | Purpose                                                                                                   |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
-| `clerk-auth.css`     | Glass-themed overrides for Clerk sign-in/up and profile modals (Prism/Shadow/Clear aware).                |
+| `clerk-auth.css`     | Glass-themed overrides for Clerk sign-in/up and profile modals (Prism/Shadow/Clear/Acrylic aware).        |
 | `clerkAppearance.ts` | `buildClerkAppearance()` / `buildClerkProfileAppearance()` — map Clerk's `appearance` API to DAL classes. |
 | `ClerkAuthShell.tsx` | Auth page wrapper: `glass-surface` card + `clerk-auth-shell` + title/subtitle.                            |
 | `index.ts`           | Barrel exports.                                                                                           |
