@@ -10,14 +10,15 @@ import {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type UiStyle = 'prism' | 'shadow' | 'clear';
+export const UI_STYLES = ['prism', 'shadow', 'clear', 'acrylic'] as const;
 
-export const UI_STYLES: UiStyle[] = ['prism', 'shadow', 'clear'];
+export type UiStyle = (typeof UI_STYLES)[number];
 
 export const UI_STYLE_LABELS: Record<UiStyle, string> = {
   prism: 'Prism',
   shadow: 'Shadow',
   clear: 'Clear',
+  acrylic: 'Acrylic',
 };
 
 interface ThemeContextValue {
@@ -60,10 +61,13 @@ function parseThemeCookie(): ThemeMode | null {
   return null;
 }
 
+function isUiStyle(raw: string): raw is UiStyle {
+  return UI_STYLES.some((style) => style === raw);
+}
+
 function normalizeUiStyle(raw: string | null | undefined): UiStyle | null {
   if (!raw) return null;
-  if (raw === 'prism' || raw === 'shadow' || raw === 'clear') return raw;
-  return null;
+  return isUiStyle(raw) ? raw : null;
 }
 
 function parseUiStyleCookie(): UiStyle | null {
@@ -145,7 +149,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('ui-prism', 'ui-shadow', 'ui-clear');
+    for (const style of UI_STYLES) {
+      root.classList.remove(`ui-${style}`);
+    }
     root.classList.add(`ui-${uiStyle}`);
     if (!hasMountedRef.current) {
       return;
