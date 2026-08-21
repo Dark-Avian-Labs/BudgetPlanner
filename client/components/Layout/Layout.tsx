@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { LOCALES, setUserLocale, syncLocaleFromServer, type AppLocale } from '../../lib/locale';
 import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
+import { HexSideBackground } from './HexSideBackground';
 
 function ClerkTokenBridge() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -93,6 +94,7 @@ export function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       {clerkEnabled ? <ClerkTokenBridge /> : null}
+      <HexSideBackground />
       <AsciiWaveBackground />
       <header className="no-print relative z-30 px-4 pt-4 pb-2 sm:px-6">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3">
