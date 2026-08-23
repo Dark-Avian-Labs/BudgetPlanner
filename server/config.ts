@@ -66,6 +66,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const parentName = path.basename(path.resolve(__dirname, '..'));
 export const PROJECT_ROOT = path.resolve(__dirname, parentName === 'dist' ? '../..' : '..');
+
+function readPackageVersion(projectRoot: string): string {
+  try {
+    const pkgPath = path.join(projectRoot, 'package.json');
+    const raw = fs.readFileSync(pkgPath, 'utf-8');
+    const pkg: unknown = JSON.parse(raw);
+    if (!pkg || typeof pkg !== 'object' || !('version' in pkg)) {
+      return '0.0.0';
+    }
+    const version = pkg.version;
+    if (typeof version !== 'string') {
+      return '0.0.0';
+    }
+    const v = version.trim();
+    return v.length > 0 ? v : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+export const APP_VERSION = readPackageVersion(PROJECT_ROOT);
 export const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 export const SESSION_DB_PATH =
   process.env.SESSION_DB_PATH || process.env.CENTRAL_DB_PATH || path.join(DATA_DIR, 'sessions.db');

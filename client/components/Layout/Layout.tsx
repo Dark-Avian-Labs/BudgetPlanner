@@ -5,6 +5,7 @@ import { Link, Outlet } from 'react-router';
 
 import {
   APP_DISPLAY_NAME,
+  APP_VERSION,
   CLERK_PUBLISHABLE_KEY,
   LEGAL_ENTITY_NAME,
   LEGAL_PAGE_URL,
@@ -19,6 +20,7 @@ import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
 import { HexSideBackground } from './HexSideBackground';
 import { PlanSwitcher } from './PlanSwitcher';
+import { StaleClientUpdateBanner } from './StaleClientUpdateBanner';
 
 function ClerkTokenBridge() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -179,6 +181,7 @@ export function Layout() {
           </a>
         </div>
       </footer>
+      <StaleClientUpdateBanner appVersion={APP_VERSION} />
     </div>
   );
 }
