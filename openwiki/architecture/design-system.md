@@ -3,7 +3,7 @@ type: Architecture Overview
 title: DAL Design System
 description: The two-axis theme model, glass-surface component contracts, design tokens, UI primitives, theme boot/persistence, and layered shell backgrounds.
 tags: [design-system, theming, tailwind, ui, glass]
-timestamp: 2026-08-23T04:20:00Z
+timestamp: 2026-08-23T04:51:00Z
 ---
 
 # Overview
@@ -66,6 +66,7 @@ Use the shared class names and primitives rather than inventing one-offs:
 
 - Surfaces: `glass-surface`, `glass-modal-surface`, `glass-shell`.
 - Buttons: `btn btn-accent` / `btn-danger` / `btn-cancel` / `btn-secondary`.
+- Stale client banner: `StaleClientUpdateBanner` + gold `stale-update-cta` / `stale-update-cta__label` ("Refresh now!"). Same markup as Armory and Codex.
 - Layout: `max-w-[2000px]` on header, main, footer (`client/components/Layout/Layout.tsx`).
 - Primitives in `client/components/ui/`: `Button`, `Input`, `GlassCard`, `Modal`, `Menu`,
   `SelectDropdown`, `UiStyleSelector`, `MaterialSymbol`.

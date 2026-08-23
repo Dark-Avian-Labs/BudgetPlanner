@@ -3,7 +3,7 @@ type: Architecture Overview
 title: Project Structure
 description: Directory layout, the server/client split, and how plan code is shared.
 tags: [architecture, structure]
-timestamp: 2026-08-23T04:20:00Z
+timestamp: 2026-08-23T04:51:00Z
 ---
 
 # Overview
@@ -30,7 +30,8 @@ client/
 ├── features/invite/      Accept invite
 ├── features/home/        Plan list
 ├── features/auth/        Sign-in / sign-up
-├── components/Layout/    Shell + PlanSwitcher
+├── components/Layout/    Shell, PlanSwitcher, StaleClientUpdateBanner
+├── hooks/                useStaleBundlePrompt (`/api/version` poll)
 └── lib/dueThisMonth.ts   Client wrapper around shared due math
 
 shared/dueThisMonth.ts    Canonical due-this-month rules

@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_APP_NAME?: string;
+  readonly VITE_APP_VERSION?: string;
   readonly VITE_LEGAL_ENTITY_NAME?: string;
   readonly VITE_LEGAL_PAGE_URL?: string;
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string;

@@ -18,6 +18,7 @@ import {
   SECURE_COOKIES,
   COOKIE_DOMAIN,
   APP_NAME,
+  APP_VERSION,
   PROJECT_ROOT,
   SESSION_COOKIE_NAME,
   CLERK_CONFIGURED,
@@ -70,6 +71,7 @@ const baselineLimiter = rateLimit({
   skip: (req) =>
     req.path === '/healthz' ||
     req.path === '/readyz' ||
+    req.path === '/api/version' ||
     req.path === '/favicon.ico' ||
     /^\/assets\/.+\.(?:css|js|png|jpe?g|gif|webp|svg|ico|woff2?)$/i.test(req.path),
 });
@@ -157,6 +159,11 @@ app.get('/readyz', (_req, res) => {
   } catch {
     res.status(503).json({ status: 'not_ready', app: APP_NAME });
   }
+});
+
+app.get('/api/version', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ version: APP_VERSION });
 });
 
 app.use('/api', appApiLimiter, apiRouter);
