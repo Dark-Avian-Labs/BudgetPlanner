@@ -101,7 +101,6 @@ export function createAppSchema(db: Database.Database): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_entries_plan ON entries(plan_id, category_id, sort_order);
-    CREATE INDEX IF NOT EXISTS idx_entries_archived ON entries(plan_id, archived_at);
   `);
 
   migrateEntriesHalfyearlyFrequency(db);
@@ -175,6 +174,8 @@ function migrateEntriesArchivedAt(db: Database.Database): void {
 }
 
 function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void {
+  const existingCols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{ name: string }>;
+  const hasArchivedAt = existingCols.some((c) => c.name === 'archived_at');
   const frequencyCheck = includeOnce
     ? `('monthly', 'quarterly', 'halfyearly', 'yearly', 'once')`
     : `('monthly', 'quarterly', 'halfyearly', 'yearly')`;
@@ -183,6 +184,7 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
     : '';
   const dueYearSelect = includeOnce ? 'NULL AS due_year,' : '';
   const dueYearInsert = includeOnce ? 'due_year,' : '';
+  const archivedSelect = hasArchivedAt ? 'archived_at,' : 'NULL AS archived_at,';
 
   db.pragma('foreign_keys = OFF');
   const tx = db.transaction(() => {
@@ -202,6 +204,7 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
         comment TEXT,
         end_date TEXT,
         final_amount_cents INTEGER CHECK (final_amount_cents IS NULL OR final_amount_cents >= 0),
+        archived_at TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -209,12 +212,12 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
 
       INSERT INTO entries_new (
         id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
-        due_day, due_month, ${dueYearInsert} comment, end_date, final_amount_cents, sort_order,
+        due_day, due_month, ${dueYearInsert} comment, end_date, final_amount_cents, archived_at, sort_order,
         created_at, updated_at
       )
       SELECT
         id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
-        due_day, due_month, ${dueYearSelect} comment, end_date, final_amount_cents, sort_order,
+        due_day, due_month, ${dueYearSelect} comment, end_date, final_amount_cents, ${archivedSelect} sort_order,
         created_at, updated_at
       FROM entries;
 
