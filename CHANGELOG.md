@@ -23,3 +23,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.2.0** `chore` [#12](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/12): feat/rarity hue ladder
 - **v1.2.1** `chore` [#13](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/13): fix/security audit
 - **v1.2.2** `chore` [#14](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/14): fix/entries archived at migrate
+- **v1.3.0** `chore` [#15](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/15): feat/stale client refresh
