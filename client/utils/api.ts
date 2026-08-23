@@ -23,7 +23,7 @@ async function fetchCsrfToken(): Promise<string> {
       return data.csrfToken ?? '';
     }
   } catch {
-    // Network failure: caller proceeds without a token and surfaces the 403.
+    // ignore
   }
   return '';
 }
