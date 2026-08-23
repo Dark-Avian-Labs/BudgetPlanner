@@ -17,7 +17,11 @@
     "settings": "Einstellungen",
     "copyLink": "Einladungslink kopieren",
     "copied": "Kopiert",
-    "setDefault": "Als Standardplan festlegen"
+    "copyFailed": "Kopieren fehlgeschlagen. Markiere den Link und kopiere ihn manuell.",
+    "setDefault": "Als Standardplan festlegen",
+    "retry": "Erneut versuchen",
+    "crashTitle": "Etwas ist schiefgelaufen",
+    "crashHint": "Lade die Seite neu. Wenn es bleibt, melde dich ab und wieder an."
   },
   "plan": {
     "thisMonth": "Dieser Monat",
@@ -68,7 +72,24 @@
     "breakdownEmpty": "Keine fälligen Beträge diesen Monat.",
     "dragCategory": "Kategorie ziehen",
     "dragEntry": "Eintrag ziehen",
-    "emptyCategory": "Leere Kategorie — Einträge hier ablegen"
+    "emptyCategory": "Leere Kategorie — Einträge hier ablegen",
+    "allPlans": "Alle Pläne",
+    "switchPlan": "Plan wechseln",
+    "notFound": "Dieser Plan wurde nicht gefunden.",
+    "accessDenied": "Du hast keinen Zugriff auf diesen Plan.",
+    "loadFailed": "Plan konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
+    "people": "Personen",
+    "members": "Mitglieder",
+    "pendingInvites": "Offene Einladungen",
+    "owner": "Inhaber",
+    "leave": "Plan verlassen",
+    "leaveConfirm": "„{{name}}“ verlassen? Du verlierst den Zugriff, bis du neu eingeladen wirst.",
+    "deletePlan": "Plan löschen",
+    "deletePlanConfirm": "Plan „{{name}}“ löschen? Kategorien, Konten, Einträge und Einladungen werden dauerhaft entfernt.",
+    "removeMember": "Entfernen",
+    "removeMemberConfirm": "{{email}} aus diesem Plan entfernen?",
+    "revokeInvite": "Zurückziehen",
+    "revokeInviteConfirm": "Einladung für {{email}} zurückziehen?"
   },
   "entry": {
     "name": "Name",
@@ -92,7 +113,8 @@
     "endDate": "Enddatum",
     "finalAmount": "Letzte Rate",
     "details": "Details",
-    "noComment": "Kein Kommentar"
+    "noComment": "Kein Kommentar",
+    "deleteConfirm": "„{{name}}“ löschen? Das kann nicht rückgängig gemacht werden."
   },
   "invite": {
     "title": "Person einladen",

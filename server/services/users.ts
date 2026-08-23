@@ -13,39 +13,30 @@ export interface AppUser {
 
 const DEFAULT_CATEGORIES = ['Accounts & Credit', 'Household', 'Entertainment', 'Parents'];
 
-export function upsertUserFromClerk(clerkUserId: string, email: string): AppUser {
-  const db = getAppDb();
-  const existing = db
+export function upsertUserFromClerk(
+  clerkUserId: string,
+  email: string,
+  db: ReturnType<typeof getAppDb> = getAppDb(),
+): AppUser {
+  const id = randomUUID();
+  db.prepare(
+    `INSERT INTO users (id, clerk_user_id, email, locale)
+     VALUES (?, ?, ?, 'en')
+     ON CONFLICT(clerk_user_id) DO UPDATE SET
+       email = excluded.email,
+       updated_at = datetime('now')`,
+  ).run(id, clerkUserId, email);
+
+  const row = db
     .prepare(
       `SELECT id, clerk_user_id, email, locale, default_plan_id
        FROM users WHERE clerk_user_id = ?`,
     )
     .get(clerkUserId) as AppUser | undefined;
-
-  if (existing) {
-    if (existing.email !== email) {
-      db.prepare(`UPDATE users SET email = ?, updated_at = datetime('now') WHERE id = ?`).run(
-        email,
-        existing.id,
-      );
-      return { ...existing, email };
-    }
-    return existing;
+  if (!row) {
+    throw new Error('Failed to sync user');
   }
-
-  const id = randomUUID();
-  db.prepare(
-    `INSERT INTO users (id, clerk_user_id, email, locale)
-     VALUES (?, ?, ?, 'en')`,
-  ).run(id, clerkUserId, email);
-
-  return {
-    id,
-    clerk_user_id: clerkUserId,
-    email,
-    locale: 'en',
-    default_plan_id: null,
-  };
+  return row;
 }
 
 export function getUserById(id: string): AppUser | null {

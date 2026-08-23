@@ -1,4 +1,6 @@
-import type { EntryFrequency } from './types';
+import { frequencyNumber } from './dueThisMonth';
+
+export { frequencyNumber };
 
 export function formatMoney(
   amountCents: number,
@@ -7,10 +9,15 @@ export function formatMoney(
   signed = false,
 ): string {
   const value = amountCents / 100;
-  const formatted = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-  }).format(Math.abs(value));
+  let formatted: string;
+  try {
+    formatted = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+    }).format(Math.abs(value));
+  } catch {
+    formatted = `${Math.abs(value).toFixed(2)} ${currency}`;
+  }
 
   if (!signed) return formatted;
   if (value > 0) return `+${formatted}`;
@@ -29,14 +36,6 @@ export function formatDueMonthDay(month: number, day: number, locale: string): s
   const m = String(month).padStart(2, '0');
   if (locale.startsWith('de')) return `${d}.${m}.`;
   return `${d}/${m}`;
-}
-
-export function frequencyNumber(frequency: EntryFrequency): 1 | 3 | 6 | 12 | 0 {
-  if (frequency === 'once') return 0;
-  if (frequency === 'monthly') return 1;
-  if (frequency === 'quarterly') return 3;
-  if (frequency === 'halfyearly') return 6;
-  return 12;
 }
 
 export function parseAmountToCents(raw: string): number | null {

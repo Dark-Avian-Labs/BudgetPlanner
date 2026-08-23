@@ -62,6 +62,21 @@ export interface PlanDetail {
   entries: Entry[];
   totals: MonthTotals;
   month: { year: number; month: number };
+  members: PlanMember[];
+  pendingInvites: PendingInvite[];
+}
+
+export interface PlanMember {
+  id: string;
+  email: string;
+  role: MemberRole;
+}
+
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: 'editor' | 'viewer';
+  expires_at: string;
 }
 
 export interface Me {

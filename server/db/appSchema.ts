@@ -21,6 +21,7 @@ const ENTRIES_DDL = `
   comment TEXT,
   end_date TEXT,
   final_amount_cents INTEGER CHECK (final_amount_cents IS NULL OR final_amount_cents >= 0),
+  archived_at TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -54,6 +55,8 @@ export function createAppSchema(db: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (plan_id, user_id)
     );
+
+    CREATE INDEX IF NOT EXISTS idx_plan_members_user ON plan_members(user_id);
 
     CREATE TABLE IF NOT EXISTS plan_invites (
       id TEXT PRIMARY KEY,
@@ -98,11 +101,13 @@ export function createAppSchema(db: Database.Database): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_entries_plan ON entries(plan_id, category_id, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_entries_archived ON entries(plan_id, archived_at);
   `);
 
   migrateEntriesHalfyearlyFrequency(db);
   migrateAccountsColor(db);
   migrateEntriesOnceFrequency(db);
+  migrateEntriesArchivedAt(db);
 }
 
 function migrateAccountsColor(db: Database.Database): void {
@@ -159,6 +164,14 @@ function migrateEntriesOnceFrequency(db: Database.Database): void {
       `ALTER TABLE entries ADD COLUMN due_year INTEGER CHECK (due_year IS NULL OR (due_year >= 2000 AND due_year <= 2100))`,
     );
   }
+}
+
+function migrateEntriesArchivedAt(db: Database.Database): void {
+  const cols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'archived_at')) {
+    db.exec(`ALTER TABLE entries ADD COLUMN archived_at TEXT`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_entries_archived ON entries(plan_id, archived_at)`);
 }
 
 function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void {

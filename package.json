@@ -25,7 +25,8 @@
     "env:encrypt": "dotenvx encrypt -f .env.development && dotenvx encrypt -f .env.production",
     "env:decrypt": "dotenvx decrypt -f .env.development && dotenvx decrypt -f .env.production",
     "env:set:dev": "dotenvx set -f .env.development",
-    "env:set:prod": "dotenvx set -f .env.production"
+    "env:set:prod": "dotenvx set -f .env.production",
+    "db:backup": "node scripts/backup-app-db.mjs"
   },
   "dependencies": {
     "@clerk/express": "^2.1.60",
@@ -40,7 +41,6 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/material-symbols-rounded": "^5.3.3",
     "better-sqlite3": "^13.0.3",
-    "better-sqlite3-session-store": "^0.1.0",
     "cookie-parser": "^1.4.7",
     "csrf-sync": "^4.2.1",
     "express": "^5.2.1",

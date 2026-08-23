@@ -6,6 +6,14 @@ import type { EntryFrequency, EntryKind, MemberRole } from '../db/appSchema.js';
 import { getAppDb } from '../db/connection.js';
 import { isAccountColor, nextAccountColor } from '../lib/accountColors.js';
 import { computeMonthTotals, isOnceEntryExpired } from '../lib/dueThisMonth.js';
+import {
+  clampPlanYear,
+  isNonNegativeInteger,
+  normalizeComment,
+  normalizeCurrency,
+  normalizeName,
+  validateEntryBody,
+} from '../lib/planValidation.js';
 import { requireAuth, requirePlanAccess } from '../middleware/auth.js';
 import {
   createInviteToken,
@@ -57,46 +65,114 @@ interface EntryRow {
   comment: string | null;
   end_date: string | null;
   final_amount_cents: number | null;
+  archived_at: string | null;
   sort_order: number;
+}
+
+interface MemberRow {
+  id: string;
+  email: string;
+  role: MemberRole;
+}
+
+interface InviteRow {
+  id: string;
+  email: string;
+  role: 'editor' | 'viewer';
+  expires_at: string;
+}
+
+const ENTRY_SELECT = `id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
+              due_day, due_month, due_year, comment, end_date, final_amount_cents, archived_at, sort_order`;
+
+function routeParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
 
 function parseMonthQuery(req: Request): { year: number; month: number } {
   const now = new Date();
-  const year = Number(req.query.year) || now.getFullYear();
+  const fallbackYear = now.getFullYear();
+  const rawYear = Number(req.query.year);
+  const year = clampPlanYear(Number.isFinite(rawYear) ? rawYear : fallbackYear, fallbackYear);
   const month = Number(req.query.month) || now.getMonth() + 1;
   return { year, month: Math.min(12, Math.max(1, month)) };
 }
 
-function purgeExpiredOnceEntries(db: ReturnType<typeof getAppDb>, planId?: string): void {
+function archiveExpiredOnceEntries(db: ReturnType<typeof getAppDb>, planId: string): void {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  const rows = (
-    planId
-      ? db
-          .prepare(
-            `SELECT id, frequency, due_month, due_year FROM entries WHERE plan_id = ? AND frequency = 'once'`,
-          )
-          .all(planId)
-      : db
-          .prepare(
-            `SELECT id, frequency, due_month, due_year FROM entries WHERE frequency = 'once'`,
-          )
-          .all()
-  ) as Array<{
-    id: string;
-    frequency: EntryFrequency;
-    due_month: number | null;
-    due_year: number | null;
-  }>;
+  const rows = db
+    .prepare(
+      `SELECT id, frequency, due_month, due_year FROM entries
+       WHERE plan_id = ? AND frequency = 'once' AND archived_at IS NULL`,
+    )
+    .all(planId) as Array<{
+      id: string;
+      frequency: EntryFrequency;
+      due_month: number | null;
+      due_year: number | null;
+    }>;
 
-  const del = db.prepare(`DELETE FROM entries WHERE id = ?`);
+  const archive = db.prepare(
+    `UPDATE entries SET archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
+  );
   const tx = db.transaction(() => {
     for (const row of rows) {
-      if (isOnceEntryExpired(row, year, month)) del.run(row.id);
+      if (isOnceEntryExpired(row, year, month)) archive.run(row.id);
     }
   });
   tx();
+}
+
+function categoryBelongsToPlan(
+  db: ReturnType<typeof getAppDb>,
+  categoryId: string,
+  planId: string,
+): boolean {
+  return Boolean(
+    db.prepare(`SELECT id FROM categories WHERE id = ? AND plan_id = ?`).get(categoryId, planId),
+  );
+}
+
+function accountBelongsToPlan(
+  db: ReturnType<typeof getAppDb>,
+  accountId: string,
+  planId: string,
+): boolean {
+  return Boolean(
+    db.prepare(`SELECT id FROM accounts WHERE id = ? AND plan_id = ?`).get(accountId, planId),
+  );
+}
+
+function listMembers(db: ReturnType<typeof getAppDb>, planId: string): MemberRow[] {
+  return db
+    .prepare(
+      `SELECT u.id, u.email, pm.role
+       FROM plan_members pm
+       JOIN users u ON u.id = pm.user_id
+       WHERE pm.plan_id = ?
+       ORDER BY pm.role, u.email COLLATE NOCASE`,
+    )
+    .all(planId) as MemberRow[];
+}
+
+function listPendingInvites(db: ReturnType<typeof getAppDb>, planId: string): InviteRow[] {
+  return db
+    .prepare(
+      `SELECT id, email, role, expires_at
+       FROM plan_invites
+       WHERE plan_id = ? AND accepted_at IS NULL AND expires_at > datetime('now')
+       ORDER BY created_at DESC`,
+    )
+    .all(planId) as InviteRow[];
+}
+
+function clearDefaultPlan(db: ReturnType<typeof getAppDb>, userId: string, planId: string): void {
+  db.prepare(
+    `UPDATE users SET default_plan_id = NULL, updated_at = datetime('now')
+     WHERE id = ? AND default_plan_id = ?`,
+  ).run(userId, planId);
 }
 
 plansRouter.get('/', (req: Request, res: Response) => {
@@ -126,12 +202,18 @@ plansRouter.get('/', (req: Request, res: Response) => {
 
 plansRouter.post('/', (req: Request, res: Response) => {
   const user = req.appUser!;
-  const name =
+  const rawName =
     typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : 'Household';
-  const currency =
-    typeof req.body?.currency === 'string' && req.body.currency.trim()
-      ? req.body.currency.trim().toUpperCase()
-      : 'EUR';
+  const name = normalizeName(rawName);
+  const currency = normalizeCurrency(req.body?.currency, 'EUR');
+  if (!name) {
+    res.status(400).json({ error: 'Invalid plan name' });
+    return;
+  }
+  if (!currency) {
+    res.status(400).json({ error: 'Invalid currency' });
+    return;
+  }
 
   const planId = createPlanForOwner(user, name, currency);
   const plan = getAppDb()
@@ -144,7 +226,7 @@ plansRouter.post('/', (req: Request, res: Response) => {
 });
 
 plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Response) => {
-  const planId = req.params.planId as string;
+  const planId = routeParam(req.params.planId);
   const db = getAppDb();
   const plan = db
     .prepare(
@@ -156,8 +238,7 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
     return;
   }
 
-  purgeExpiredOnceEntries(db, planId);
-
+  const includeArchived = req.query.includeArchived === '1';
   const categories = db
     .prepare(
       `SELECT id, plan_id, name, sort_order FROM categories WHERE plan_id = ? ORDER BY sort_order, name`,
@@ -172,15 +253,16 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
 
   const entries = db
     .prepare(
-      `SELECT id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
-              due_day, due_month, due_year, comment, end_date, final_amount_cents, sort_order
-       FROM entries WHERE plan_id = ? ORDER BY sort_order, name`,
+      includeArchived
+        ? `SELECT ${ENTRY_SELECT} FROM entries WHERE plan_id = ? ORDER BY sort_order, name`
+        : `SELECT ${ENTRY_SELECT} FROM entries WHERE plan_id = ? AND archived_at IS NULL ORDER BY sort_order, name`,
     )
     .all(planId) as EntryRow[];
 
   const { year, month } = parseMonthQuery(req);
   const totals = computeMonthTotals(entries, year, month);
   const role = (res.locals as { planRole?: MemberRole }).planRole!;
+  const members = listMembers(db, planId);
 
   res.json({
     plan,
@@ -190,11 +272,13 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
     entries,
     totals,
     month: { year, month },
+    members,
+    pendingInvites: role === 'owner' ? listPendingInvites(db, planId) : [],
   });
 });
 
 plansRouter.patch('/:planId', requirePlanAccess('editor'), (req: Request, res: Response) => {
-  const planId = req.params.planId!;
+  const planId = routeParam(req.params.planId);
   const db = getAppDb();
   const plan = db.prepare(`SELECT id, name, currency FROM plans WHERE id = ?`).get(planId) as
     | { id: string; name: string; currency: string }
@@ -204,12 +288,16 @@ plansRouter.patch('/:planId', requirePlanAccess('editor'), (req: Request, res: R
     return;
   }
 
-  const name =
-    typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : plan.name;
-  const currency =
-    typeof req.body?.currency === 'string' && req.body.currency.trim()
-      ? req.body.currency.trim().toUpperCase()
-      : plan.currency;
+  const name = normalizeName(req.body?.name, plan.name);
+  const currency = normalizeCurrency(req.body?.currency, plan.currency);
+  if (!name) {
+    res.status(400).json({ error: 'Invalid plan name' });
+    return;
+  }
+  if (!currency) {
+    res.status(400).json({ error: 'Invalid currency' });
+    return;
+  }
 
   db.prepare(
     `UPDATE plans SET name = ?, currency = ?, updated_at = datetime('now') WHERE id = ?`,
@@ -223,12 +311,90 @@ plansRouter.patch('/:planId', requirePlanAccess('editor'), (req: Request, res: R
   res.json({ plan: updated });
 });
 
+plansRouter.delete('/:planId', requirePlanAccess('owner'), (req: Request, res: Response) => {
+  const planId = routeParam(req.params.planId);
+  const db = getAppDb();
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE users SET default_plan_id = NULL, updated_at = datetime('now') WHERE default_plan_id = ?`,
+    ).run(planId);
+    const result = db.prepare(`DELETE FROM plans WHERE id = ?`).run(planId);
+    return result.changes;
+  });
+  if (tx() === 0) {
+    res.status(404).json({ error: 'Plan not found' });
+    return;
+  }
+  res.status(204).end();
+});
+
+plansRouter.post('/:planId/leave', requirePlanAccess('viewer'), (req: Request, res: Response) => {
+  const planId = routeParam(req.params.planId);
+  const user = req.appUser!;
+  const role = (res.locals as { planRole?: MemberRole }).planRole;
+  if (role === 'owner') {
+    res.status(400).json({ error: 'Owner cannot leave the plan. Delete it instead.' });
+    return;
+  }
+
+  const db = getAppDb();
+  const tx = db.transaction(() => {
+    clearDefaultPlan(db, user.id, planId);
+    db.prepare(`DELETE FROM plan_members WHERE plan_id = ? AND user_id = ?`).run(planId, user.id);
+  });
+  tx();
+  res.status(204).end();
+});
+
+plansRouter.delete(
+  '/:planId/members/:userId',
+  requirePlanAccess('owner'),
+  (req: Request, res: Response) => {
+    const planId = routeParam(req.params.planId);
+    const userId = routeParam(req.params.userId);
+    const db = getAppDb();
+    const membership = getMembership(planId, userId);
+    if (!membership) {
+      res.status(404).json({ error: 'Member not found' });
+      return;
+    }
+    if (membership.role === 'owner') {
+      res.status(400).json({ error: 'Cannot remove the plan owner' });
+      return;
+    }
+
+    const tx = db.transaction(() => {
+      clearDefaultPlan(db, userId, planId);
+      db.prepare(`DELETE FROM plan_members WHERE plan_id = ? AND user_id = ?`).run(planId, userId);
+    });
+    tx();
+    res.status(204).end();
+  },
+);
+
+plansRouter.delete(
+  '/:planId/invites/:inviteId',
+  requirePlanAccess('owner'),
+  (req: Request, res: Response) => {
+    const planId = routeParam(req.params.planId);
+    const inviteId = routeParam(req.params.inviteId);
+    const result = getAppDb()
+      .prepare(`DELETE FROM plan_invites WHERE id = ? AND plan_id = ? AND accepted_at IS NULL`)
+      .run(inviteId, planId);
+    if (result.changes === 0) {
+      res.status(404).json({ error: 'Invite not found' });
+      return;
+    }
+    res.status(204).end();
+  },
+);
+
 plansRouter.post(
   '/:planId/categories',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const planId = req.params.planId!;
-    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const planId = routeParam(req.params.planId);
+    const name = normalizeName(req.body?.name);
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
       return;
@@ -255,7 +421,8 @@ plansRouter.patch(
   '/:planId/categories/:categoryId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, categoryId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const categoryId = routeParam(req.params.categoryId);
     const db = getAppDb();
     const existing = db
       .prepare(`SELECT id, name, sort_order FROM categories WHERE id = ? AND plan_id = ?`)
@@ -264,12 +431,14 @@ plansRouter.patch(
       res.status(404).json({ error: 'Category not found' });
       return;
     }
-    const name =
-      typeof req.body?.name === 'string' && req.body.name.trim()
-        ? req.body.name.trim()
-        : existing.name;
-    const sortOrder =
-      typeof req.body?.sort_order === 'number' ? req.body.sort_order : existing.sort_order;
+    const name = normalizeName(req.body?.name, existing.name);
+    if (!name) {
+      res.status(400).json({ error: 'Invalid name' });
+      return;
+    }
+    const sortOrder = isNonNegativeInteger(req.body?.sort_order)
+      ? req.body.sort_order
+      : existing.sort_order;
     db.prepare(
       `UPDATE categories SET name = ?, sort_order = ?, updated_at = datetime('now') WHERE id = ?`,
     ).run(name, sortOrder, categoryId);
@@ -284,7 +453,8 @@ plansRouter.delete(
   '/:planId/categories/:categoryId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, categoryId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const categoryId = routeParam(req.params.categoryId);
     const result = getAppDb()
       .prepare(`DELETE FROM categories WHERE id = ? AND plan_id = ?`)
       .run(categoryId, planId);
@@ -300,8 +470,8 @@ plansRouter.post(
   '/:planId/accounts',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const planId = req.params.planId!;
-    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const planId = routeParam(req.params.planId);
+    const name = normalizeName(req.body?.name);
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
       return;
@@ -333,7 +503,8 @@ plansRouter.patch(
   '/:planId/accounts/:accountId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, accountId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const accountId = routeParam(req.params.accountId);
     const db = getAppDb();
     const existing = db
       .prepare(`SELECT id, name, color, sort_order FROM accounts WHERE id = ? AND plan_id = ?`)
@@ -344,12 +515,14 @@ plansRouter.patch(
       res.status(404).json({ error: 'Account not found' });
       return;
     }
-    const name =
-      typeof req.body?.name === 'string' && req.body.name.trim()
-        ? req.body.name.trim()
-        : existing.name;
-    const sortOrder =
-      typeof req.body?.sort_order === 'number' ? req.body.sort_order : existing.sort_order;
+    const name = normalizeName(req.body?.name, existing.name);
+    if (!name) {
+      res.status(400).json({ error: 'Invalid name' });
+      return;
+    }
+    const sortOrder = isNonNegativeInteger(req.body?.sort_order)
+      ? req.body.sort_order
+      : existing.sort_order;
     const color = isAccountColor(req.body?.color) ? req.body.color : existing.color;
     db.prepare(
       `UPDATE accounts SET name = ?, color = ?, sort_order = ?, updated_at = datetime('now') WHERE id = ?`,
@@ -365,7 +538,8 @@ plansRouter.delete(
   '/:planId/accounts/:accountId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, accountId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const accountId = routeParam(req.params.accountId);
     const result = getAppDb()
       .prepare(`DELETE FROM accounts WHERE id = ? AND plan_id = ?`)
       .run(accountId, planId);
@@ -377,43 +551,8 @@ plansRouter.delete(
   },
 );
 
-function validateEntryBody(body: Record<string, unknown>, partial = false) {
-  const errors: string[] = [];
-  if (!partial || body.name !== undefined) {
-    if (typeof body.name !== 'string' || !body.name.trim()) errors.push('name');
-  }
-  if (!partial || body.amount_cents !== undefined) {
-    if (
-      typeof body.amount_cents !== 'number' ||
-      body.amount_cents < 0 ||
-      !Number.isInteger(body.amount_cents)
-    ) {
-      errors.push('amount_cents');
-    }
-  }
-  if (!partial || body.kind !== undefined) {
-    if (!['expense', 'income', 'credit'].includes(body.kind as string)) errors.push('kind');
-  }
-  if (!partial || body.frequency !== undefined) {
-    if (
-      !['monthly', 'quarterly', 'halfyearly', 'yearly', 'once'].includes(body.frequency as string)
-    ) {
-      errors.push('frequency');
-    }
-  }
-  if (!partial || body.due_day !== undefined) {
-    if (typeof body.due_day !== 'number' || body.due_day < 1 || body.due_day > 31) {
-      errors.push('due_day');
-    }
-  }
-  if (!partial || body.category_id !== undefined) {
-    if (typeof body.category_id !== 'string' || !body.category_id) errors.push('category_id');
-  }
-  return errors;
-}
-
 plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request, res: Response) => {
-  const planId = req.params.planId!;
+  const planId = routeParam(req.params.planId);
   const body = (req.body ?? {}) as Record<string, unknown>;
   const errors = validateEntryBody(body);
   if (errors.length) {
@@ -432,7 +571,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
     dueMonth = null;
     dueYear = null;
   } else if (frequency === 'once') {
-    if (dueYear == null || dueYear < 2000 || dueYear > 2100) {
+    if (dueYear == null) {
       res.status(400).json({ error: 'due_year is required for one-time entries' });
       return;
     }
@@ -441,23 +580,22 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
   }
 
   const db = getAppDb();
-  const cat = db
-    .prepare(`SELECT id FROM categories WHERE id = ? AND plan_id = ?`)
-    .get(body.category_id, planId);
-  if (!cat) {
+  archiveExpiredOnceEntries(db, planId);
+  if (!categoryBelongsToPlan(db, body.category_id as string, planId)) {
     res.status(400).json({ error: 'Invalid category' });
     return;
   }
 
   const accountId = typeof body.account_id === 'string' && body.account_id ? body.account_id : null;
-  if (accountId) {
-    const acc = db
-      .prepare(`SELECT id FROM accounts WHERE id = ? AND plan_id = ?`)
-      .get(accountId, planId);
-    if (!acc) {
-      res.status(400).json({ error: 'Invalid account' });
-      return;
-    }
+  if (accountId && !accountBelongsToPlan(db, accountId, planId)) {
+    res.status(400).json({ error: 'Invalid account' });
+    return;
+  }
+
+  const comment = normalizeComment(body.comment, null);
+  if (body.comment !== undefined && body.comment !== null && comment == null) {
+    res.status(400).json({ error: 'Invalid fields: comment' });
+    return;
   }
 
   const max = db
@@ -484,13 +622,13 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
     body.due_day,
     dueMonth,
     dueYear,
-    typeof body.comment === 'string' ? body.comment.trim() || null : null,
+    comment,
     typeof body.end_date === 'string' && body.end_date ? body.end_date : null,
     typeof body.final_amount_cents === 'number' ? body.final_amount_cents : null,
     max.m + 1,
   );
 
-  const entry = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(id);
+  const entry = db.prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ?`).get(id);
   res.status(201).json({ entry });
 });
 
@@ -498,10 +636,12 @@ plansRouter.patch(
   '/:planId/entries/:entryId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, entryId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const entryId = routeParam(req.params.entryId);
     const db = getAppDb();
+    archiveExpiredOnceEntries(db, planId);
     const existing = db
-      .prepare(`SELECT * FROM entries WHERE id = ? AND plan_id = ?`)
+      .prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ? AND plan_id = ?`)
       .get(entryId, planId) as EntryRow | undefined;
     if (!existing) {
       res.status(404).json({ error: 'Entry not found' });
@@ -515,10 +655,14 @@ plansRouter.patch(
       return;
     }
 
-    const name =
-      typeof body.name === 'string' && body.name.trim() ? body.name.trim() : existing.name;
-    const amountCents =
-      typeof body.amount_cents === 'number' ? body.amount_cents : existing.amount_cents;
+    const name = normalizeName(body.name, existing.name);
+    if (!name) {
+      res.status(400).json({ error: 'Invalid fields: name' });
+      return;
+    }
+    const amountCents = isNonNegativeInteger(body.amount_cents)
+      ? body.amount_cents
+      : existing.amount_cents;
     const kind = (typeof body.kind === 'string' ? body.kind : existing.kind) as EntryKind;
     const frequency = (
       typeof body.frequency === 'string' ? body.frequency : existing.frequency
@@ -537,7 +681,7 @@ plansRouter.patch(
         return;
       }
       if (frequency === 'once') {
-        if (dueYear == null || dueYear < 2000 || dueYear > 2100) {
+        if (dueYear == null) {
           res.status(400).json({ error: 'due_year is required for one-time entries' });
           return;
         }
@@ -549,18 +693,25 @@ plansRouter.patch(
       typeof body.category_id === 'string' && body.category_id
         ? body.category_id
         : existing.category_id;
+    if (!categoryBelongsToPlan(db, categoryId, planId)) {
+      res.status(400).json({ error: 'Invalid category' });
+      return;
+    }
     const accountId =
       body.account_id === null
         ? null
         : typeof body.account_id === 'string'
           ? body.account_id || null
           : existing.account_id;
-    const comment =
-      body.comment !== undefined
-        ? typeof body.comment === 'string'
-          ? body.comment.trim() || null
-          : null
-        : existing.comment;
+    if (accountId && !accountBelongsToPlan(db, accountId, planId)) {
+      res.status(400).json({ error: 'Invalid account' });
+      return;
+    }
+    const comment = normalizeComment(body.comment, existing.comment);
+    if (body.comment !== undefined && body.comment !== null && comment == null) {
+      res.status(400).json({ error: 'Invalid fields: comment' });
+      return;
+    }
     const endDate =
       body.end_date !== undefined
         ? typeof body.end_date === 'string' && body.end_date
@@ -569,11 +720,11 @@ plansRouter.patch(
         : existing.end_date;
     const finalAmount =
       body.final_amount_cents !== undefined
-        ? typeof body.final_amount_cents === 'number'
+        ? isNonNegativeInteger(body.final_amount_cents)
           ? body.final_amount_cents
           : null
         : existing.final_amount_cents;
-    const sortOrder = typeof body.sort_order === 'number' ? body.sort_order : existing.sort_order;
+    const sortOrder = isNonNegativeInteger(body.sort_order) ? body.sort_order : existing.sort_order;
 
     db.prepare(
       `UPDATE entries SET
@@ -598,7 +749,7 @@ plansRouter.patch(
       entryId,
     );
 
-    const entry = db.prepare(`SELECT * FROM entries WHERE id = ?`).get(entryId);
+    const entry = db.prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ?`).get(entryId);
     res.json({ entry });
   },
 );
@@ -607,7 +758,8 @@ plansRouter.delete(
   '/:planId/entries/:entryId',
   requirePlanAccess('editor'),
   (req: Request, res: Response) => {
-    const { planId, entryId } = req.params;
+    const planId = routeParam(req.params.planId);
+    const entryId = routeParam(req.params.entryId);
     const result = getAppDb()
       .prepare(`DELETE FROM entries WHERE id = ? AND plan_id = ?`)
       .run(entryId, planId);
@@ -620,45 +772,63 @@ plansRouter.delete(
 );
 
 plansRouter.post('/:planId/reorder', requirePlanAccess('editor'), (req: Request, res: Response) => {
-  const planId = req.params.planId!;
+  const planId = routeParam(req.params.planId);
   const categories = Array.isArray(req.body?.categories) ? req.body.categories : null;
   const entries = Array.isArray(req.body?.entries) ? req.body.entries : null;
   const db = getAppDb();
+  archiveExpiredOnceEntries(db, planId);
 
-  const tx = db.transaction(() => {
-    if (categories) {
-      const stmt = db.prepare(
-        `UPDATE categories SET sort_order = ?, updated_at = datetime('now')
+  try {
+    const tx = db.transaction(() => {
+      if (categories) {
+        const stmt = db.prepare(
+          `UPDATE categories SET sort_order = ?, updated_at = datetime('now')
            WHERE id = ? AND plan_id = ?`,
-      );
-      for (const item of categories as Array<{ id: string; sort_order: number }>) {
-        stmt.run(item.sort_order, item.id, planId);
+        );
+        for (const item of categories as Array<{ id: string; sort_order: number }>) {
+          if (typeof item.id !== 'string' || !isNonNegativeInteger(item.sort_order)) {
+            throw new Error('Invalid category reorder');
+          }
+          const result = stmt.run(item.sort_order, item.id, planId);
+          if (result.changes === 0) throw new Error('Invalid category');
+        }
       }
-    }
-    if (entries) {
-      const stmt = db.prepare(
-        `UPDATE entries SET sort_order = ?, category_id = COALESCE(?, category_id),
+      if (entries) {
+        const stmt = db.prepare(
+          `UPDATE entries SET sort_order = ?, category_id = COALESCE(?, category_id),
             updated_at = datetime('now') WHERE id = ? AND plan_id = ?`,
-      );
-      for (const item of entries as Array<{
-        id: string;
-        sort_order: number;
-        category_id?: string;
-      }>) {
-        stmt.run(item.sort_order, item.category_id ?? null, item.id, planId);
+        );
+        for (const item of entries as Array<{
+          id: string;
+          sort_order: number;
+          category_id?: string;
+        }>) {
+          if (typeof item.id !== 'string' || !isNonNegativeInteger(item.sort_order)) {
+            throw new Error('Invalid entry reorder');
+          }
+          if (item.category_id && !categoryBelongsToPlan(db, item.category_id, planId)) {
+            throw new Error('Invalid category');
+          }
+          const result = stmt.run(item.sort_order, item.category_id ?? null, item.id, planId);
+          if (result.changes === 0) throw new Error('Invalid entry');
+        }
       }
-    }
-  });
-  tx();
+    });
+    tx();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Invalid reorder';
+    res.status(400).json({ error: message });
+    return;
+  }
   res.json({ ok: true });
 });
 
 plansRouter.post('/:planId/invites', requirePlanAccess('owner'), (req: Request, res: Response) => {
-  const planId = req.params.planId!;
+  const planId = routeParam(req.params.planId);
   const user = req.appUser!;
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const role = req.body?.role === 'editor' ? 'editor' : 'viewer';
-  if (!email || !email.includes('@')) {
+  if (!email || !email.includes('@') || email.length > 254) {
     res.status(400).json({ error: 'Valid email is required' });
     return;
   }
@@ -739,26 +909,23 @@ meRouter.patch('/', (req: Request, res: Response) => {
 
 export const invitesRouter = Router();
 
-invitesRouter.get('/:token', (req: Request, res: Response) => {
-  const token = req.params.token!;
+invitesRouter.get('/:token', requireAuth, (req: Request, res: Response) => {
+  const token = routeParam(req.params.token);
   const row = getAppDb()
     .prepare(
-      `SELECT i.id, i.email, i.role, i.expires_at, i.accepted_at, p.id AS plan_id, p.name AS plan_name, p.currency
+      `SELECT i.role, i.expires_at, i.accepted_at, p.name AS plan_name, p.currency
        FROM plan_invites i
        JOIN plans p ON p.id = i.plan_id
        WHERE i.token = ?`,
     )
     .get(token) as
     | {
-        id: string;
-        email: string;
-        role: 'editor' | 'viewer';
-        expires_at: string;
-        accepted_at: string | null;
-        plan_id: string;
-        plan_name: string;
-        currency: string;
-      }
+      role: 'editor' | 'viewer';
+      expires_at: string;
+      accepted_at: string | null;
+      plan_name: string;
+      currency: string;
+    }
     | undefined;
 
   if (!row) {
@@ -775,15 +942,15 @@ invitesRouter.get('/:token', (req: Request, res: Response) => {
   }
 
   res.json({
-    email: row.email,
     role: row.role,
-    plan: { id: row.plan_id, name: row.plan_name, currency: row.currency },
+    planName: row.plan_name,
+    currency: row.currency,
     expiresAt: row.expires_at,
   });
 });
 
 invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) => {
-  const token = req.params.token!;
+  const token = routeParam(req.params.token);
   const user = req.appUser!;
   const db = getAppDb();
 
@@ -793,13 +960,13 @@ invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) 
     )
     .get(token) as
     | {
-        id: string;
-        plan_id: string;
-        email: string;
-        role: 'editor' | 'viewer';
-        expires_at: string;
-        accepted_at: string | null;
-      }
+      id: string;
+      plan_id: string;
+      email: string;
+      role: 'editor' | 'viewer';
+      expires_at: string;
+      accepted_at: string | null;
+    }
     | undefined;
 
   if (!invite) {
@@ -812,6 +979,10 @@ invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) 
   }
   if (new Date(invite.expires_at).getTime() < Date.now()) {
     res.status(410).json({ error: 'Invite expired' });
+    return;
+  }
+  if (user.email.trim().toLowerCase() !== invite.email.trim().toLowerCase()) {
+    res.status(403).json({ error: 'Invite email does not match your account' });
     return;
   }
 

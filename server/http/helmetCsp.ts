@@ -8,11 +8,12 @@ export function getClerkFapiOrigin(): string {
   return fromEnv.replace(/\/+$/, '');
 }
 
-export function createAppHelmet() {
+export function createAppHelmet(options?: { hsts?: boolean }) {
   const clerkFapi = getClerkFapiOrigin();
   const defaults = helmet.contentSecurityPolicy.getDefaultDirectives();
 
   return helmet({
+    hsts: options?.hsts === false ? false : undefined,
     contentSecurityPolicy: {
       directives: {
         ...defaults,

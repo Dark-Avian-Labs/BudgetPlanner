@@ -9,9 +9,9 @@ import { Button } from '../../components/ui/Button';
 import { apiJson } from '../../utils/api';
 
 interface InvitePreview {
-  email: string;
   role: 'editor' | 'viewer';
-  plan: { id: string; name: string; currency: string };
+  planName: string;
+  currency: string;
   expiresAt: string;
 }
 
@@ -73,8 +73,8 @@ function InviteInner() {
         })}
       </p>
       <div className="text-muted text-sm">
-        <div className="text-foreground text-base font-medium">{preview.plan.name}</div>
-        <div>{preview.plan.currency}</div>
+        <div className="text-foreground text-base font-medium">{preview.planName}</div>
+        <div>{preview.currency}</div>
       </div>
       {isLoaded && isSignedIn ? (
         <>
