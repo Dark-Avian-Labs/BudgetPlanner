@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Route, Routes } from 'react-router';
 
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Layout } from '../components/Layout/Layout';
 import { APP_PATHS } from './paths';
 
@@ -34,18 +35,21 @@ function RouteFallback() {
 }
 
 export function AppRoutes() {
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path={APP_PATHS.signIn} element={<SignInPage />} />
-        <Route path={APP_PATHS.signUp} element={<SignUpPage />} />
-        <Route element={<Layout />}>
-          <Route path={APP_PATHS.home} element={<HomePage />} />
-          <Route path="/plan/:planId" element={<PlanPage />} />
-          <Route path="/invite/:token" element={<InvitePage />} />
-          <Route path={APP_PATHS.legal} element={<LegalPage />} />
-        </Route>
-      </Routes>
-    </Suspense>
+    <ErrorBoundary fallbackTitle={t('app.crashTitle')} fallbackHint={t('app.crashHint')}>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path={APP_PATHS.signIn} element={<SignInPage />} />
+          <Route path={APP_PATHS.signUp} element={<SignUpPage />} />
+          <Route element={<Layout />}>
+            <Route path={APP_PATHS.home} element={<HomePage />} />
+            <Route path="/plan/:planId" element={<PlanPage />} />
+            <Route path="/invite/:token" element={<InvitePage />} />
+            <Route path={APP_PATHS.legal} element={<LegalPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

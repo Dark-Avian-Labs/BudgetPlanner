@@ -17,7 +17,11 @@
     "settings": "Settings",
     "copyLink": "Copy invite link",
     "copied": "Copied",
-    "setDefault": "Set as default plan"
+    "copyFailed": "Could not copy. Select the link and copy it manually.",
+    "setDefault": "Set as default plan",
+    "retry": "Try again",
+    "crashTitle": "Something went wrong",
+    "crashHint": "Reload the page. If this keeps happening, sign out and back in."
   },
   "plan": {
     "thisMonth": "This month",
@@ -68,7 +72,24 @@
     "breakdownEmpty": "No due amounts this month.",
     "dragCategory": "Drag category",
     "dragEntry": "Drag entry",
-    "emptyCategory": "Empty category — drop entries here"
+    "emptyCategory": "Empty category — drop entries here",
+    "allPlans": "All plans",
+    "switchPlan": "Switch plan",
+    "notFound": "This plan was not found.",
+    "accessDenied": "You do not have access to this plan.",
+    "loadFailed": "Could not load this plan. Check your connection and try again.",
+    "people": "People",
+    "members": "Members",
+    "pendingInvites": "Pending invites",
+    "owner": "Owner",
+    "leave": "Leave plan",
+    "leaveConfirm": "Leave “{{name}}”? You will lose access until invited again.",
+    "deletePlan": "Delete plan",
+    "deletePlanConfirm": "Delete plan “{{name}}”? This permanently removes categories, accounts, entries, and invites.",
+    "removeMember": "Remove",
+    "removeMemberConfirm": "Remove {{email}} from this plan?",
+    "revokeInvite": "Revoke",
+    "revokeInviteConfirm": "Revoke the invite for {{email}}?"
   },
   "entry": {
     "name": "Name",
@@ -92,7 +113,8 @@
     "endDate": "End date",
     "finalAmount": "Final installment",
     "details": "Details",
-    "noComment": "No comment"
+    "noComment": "No comment",
+    "deleteConfirm": "Delete “{{name}}”? This cannot be undone."
   },
   "invite": {
     "title": "Invite collaborator",

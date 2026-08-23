@@ -1,90 +1,63 @@
 ---
 type: Repository Overview
-title: AppBase Quickstart
-description: Reusable Express + React/Vite/Tailwind starter for Dark Avian Labs apps, shipping the DAL design system and a hardened server baseline with no domain features.
-tags: [overview, starter, express, react, design-system]
-timestamp: 2026-07-27T15:55:00Z
+title: BudgetPlanner Quickstart
+description: Household budget app for shared recurring expenses — stack, how to run, and where to dig in.
+tags: [overview, budget, clerk, sqlite]
+timestamp: 2026-08-23T04:20:00Z
 ---
 
-# What AppBase is
+# What BudgetPlanner is
 
-AppBase is the shared starter for new Dark Avian Labs web apps (Codex, Armory, and future
-projects). It ships the shell UX, the **DAL design system**, and a hardened Express server
-baseline while leaving domain features intentionally empty. Authentication is **not** wired by
-default — apps add [Clerk styling](integrations/clerk.md) or the org's centralized auth when
-needed (`README.md:12`, `client/App.tsx`).
+BudgetPlanner is a mobile-first household budget app. People share a plan, track recurring expenses / income / credits, and invite others by email with view or edit access. This-month totals only count what is due in the current calendar month. Sign-in uses [Clerk](integrations/clerk.md). English is the default locale; German is wired.
 
-Audience: engineers and agents scaffolding a new DAL app, or keeping the design system aligned
-across sibling apps.
+Audience: engineers and agents working on plans, money math, or the DAL shell.
 
 # Stack
 
-- **Server:** Express 5 with `helmet`, `express-session` (SQLite store via `better-sqlite3`),
-  `csrf-sync`, layered `express-rate-limit`, and health/readiness endpoints (`server/index.ts`).
-- **Client:** React 19 + React Router 8, built by Vite 8, styled with Tailwind CSS v4
-  (`client/main.tsx`, `vite.config.ts`).
-- **Tooling:** TypeScript 6, **oxlint** + **oxfmt** (not ESLint/Prettier), Vitest 4
-  (`package.json`).
-- **Runtime:** Node **>=26**, pnpm **>=11.9** (`package.json` `engines` / `packageManager`).
+- **Server:** Express 5, `helmet`, `@clerk/express`, vendored SQLite session store, `csrf-sync`, rate limits (`server/index.ts`).
+- **Client:** React 19 + React Router 8 + `@clerk/react` + i18next, Vite 8, Tailwind CSS v4.
+- **Data:** two SQLite files — `APP_DB_PATH` (plans) and `SESSION_DB_PATH` (CSRF sessions).
+- **Tooling:** TypeScript, oxlint + oxfmt, Vitest. Node **>=26**, pnpm **>=11**.
 
 # Structure at a glance
 
-- `server/` — Express entrypoint, config, API router, SQLite session store.
-- `client/` — React SPA: `app/` (routing), `features/` (pages), `components/` (Layout + UI
-  primitives), `context/` (theme), `styles/input.css` (all design tokens), `clerk/` (optional).
-- `scripts/` — `dev.mjs` (dual dev processes) and `runtime-preflight.mjs`.
-- `docs/org-standards/` — DAL engineering conventions mirrored into sibling apps.
-- `run-quality-checks.mjs` — the `pnpm run validate` gate.
+- `server/` — Express entry, config, plan API, validation, session store.
+- `client/` — SPA: `features/plan`, `invite`, `home`, `auth`; `components/Layout/PlanSwitcher`.
+- `shared/dueThisMonth.ts` — due-date math used by both sides.
+- `scripts/` — `dev.mjs`, `runtime-preflight.mjs`, `backup-app-db.mjs`.
 
-See [project structure](architecture/project-structure.md) for the full map.
+See [project structure](architecture/project-structure.md).
 
 # How to run
 
 ```bash
 pnpm install
-cp .env.example .env
-pnpm dev          # Vite (5173) + watched Express API (3002)
+pnpm dev          # Vite 5173 + watched Express
 ```
 
-Production: `pnpm run build` then `pnpm start`. Full script reference and the dev proxy model are
-in [development & build](workflows/development-and-build.md).
+Encrypted `.env.development` / `.env.production` need `.env.keys` or `DOTENV_PRIVATE_KEY_*`. Without keys, copy `.env.example` to `.env.development` and add Clerk keys.
+
+Production: `pnpm run build` then `pnpm start`. Quality gate: `pnpm run validate`.
 
 # Major concept pages
 
-- [Project structure](architecture/project-structure.md) — directory map and server/client split.
-- [Server runtime](architecture/server-runtime.md) — middleware chain, security stack, sessions,
-  health, graceful shutdown.
-- [Design system](architecture/design-system.md) — two-axis theme model, glass surfaces, tokens,
-  UI primitives, and shell backgrounds.
-- [Development & build](workflows/development-and-build.md) — dev/build/start scripts and the Vite
-  proxy.
-- [Configuration](operations/configuration.md) — environment variables and session/security
-  behavior.
-- [Validate & CI](operations/validate-and-ci.md) — the quality gate, runtime preflight, tests, and
-  org CI standards.
-- [Clerk integration](integrations/clerk.md) — optional glass-themed Clerk auth styling.
+- [Project structure](architecture/project-structure.md)
+- [Server runtime](architecture/server-runtime.md)
+- [DAL design system](architecture/design-system.md)
+- [Plans and sharing](workflows/plans-and-sharing.md)
+- [Configuration](operations/configuration.md)
+- [Validate and CI](operations/validate-and-ci.md)
+- [Clerk authentication](integrations/clerk.md)
 
 # Agent gotchas
 
-- **Node 26+ / pnpm 11+ enforced.** `run-quality-checks.mjs` runs `runtime-preflight.mjs` first; it
-  hard-fails on older Node, older pnpm (from `packageManager`), or a broken `better-sqlite3`
-  native binding (`pnpm rebuild better-sqlite3`).
-- **Dev is two processes on two ports.** `pnpm dev` starts Vite (default `5173`) and a watched
-  Express server (default `3002`); Vite proxies `/api` to the server (`scripts/dev.mjs`,
-  `vite.config.ts`). Server default port is `3001` when run standalone (`server/config.ts:13`).
-- **Production refuses the default session secret.** With `NODE_ENV=production` and the built-in
-  `SESSION_SECRET`, the server exits at startup (`server/config.ts:20`). It also throws if
-  `SECURE_COOKIES` is on without `TRUST_PROXY` (`server/index.ts:41`).
-- **Auth is opt-in.** No auth middleware ships by default; `client/clerk/` is styling only and is
-  not imported until an app wires it (`AGENTS.md`, "Optional: Clerk authentication styling").
-- **Keep AppBase aligned with siblings.** There is no shared UI npm package; design-token and
-  component-class changes must be mirrored into Codex and Armory manually
-  ([design system](architecture/design-system.md)).
+- **Code default port is 3001** (`server/config.ts`). `.env.example` and the Vite proxy default to **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` the same or the UI talks to the wrong process.
+- **Node 26+ / pnpm 11+.** `run-quality-checks.mjs` runs `scripts/runtime-preflight.mjs` first.
+- **Clerk keys missing → 503 on auth routes**, not a silent pass-through (`server/index.ts`).
+- Money is **integer cents**. Category and account IDs on PATCH/reorder must belong to the same plan (`server/lib/planValidation.ts`).
+- UI tokens are mirrored with AppBase / Armory / Codex. No shared UI package.
+- `pnpm run db:backup` copies `APP_DB_PATH`.
 
 # Backlog
 
-- **Shell background internals** (`client/lib/asciiBackground/*`, `assets/background*.txt`) — the
-  ASCII wave + hex renderers are documented only at the contract level in
-  [design system](architecture/design-system.md); the canvas math is deferred.
-- **Deep testing guide** — only one test exists today (`server/db/sessionSchema.test.ts`); testing
-  is summarized in [validate & CI](operations/validate-and-ci.md) until the suite grows.
+- **README curl examples still say 3002** even though the server fallback is 3001. Trust `server/config.ts` + the env file you actually loaded.

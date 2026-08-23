@@ -22,7 +22,8 @@ import {
   type EntryKind,
   type PlanDetail,
 } from '../../lib/types';
-import { apiJson } from '../../utils/api';
+import { ApiError, apiJson } from '../../utils/api';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import { AccountBreakdownView } from './AccountBreakdownView';
 import { PlanListView } from './PlanListView';
 import { PrintView } from './PrintView';
@@ -33,7 +34,12 @@ type PlanViewMode = 'list' | 'breakdown' | 'print';
 type PendingDelete =
   | null
   | { kind: 'category'; id: string; name: string; entryCount: number }
-  | { kind: 'account'; id: string; name: string };
+  | { kind: 'account'; id: string; name: string }
+  | { kind: 'entry'; id: string; name: string }
+  | { kind: 'plan'; name: string }
+  | { kind: 'leave'; name: string }
+  | { kind: 'member'; id: string; email: string }
+  | { kind: 'invite'; id: string; email: string };
 
 interface EntryFormState {
   name: string;
@@ -127,11 +133,17 @@ function PlanPageInner() {
       );
       setData(detail);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
+      if (err instanceof ApiError) {
+        if (err.status === 404) setError(t('plan.notFound'));
+        else if (err.status === 401 || err.status === 403) setError(t('plan.accessDenied'));
+        else setError(err.message);
+      } else {
+        setError(t('plan.loadFailed'));
+      }
     } finally {
       setLoading(false);
     }
-  }, [planId, now.year, now.month]);
+  }, [planId, now.year, now.month, t]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) void load();
@@ -316,35 +328,70 @@ function PlanPageInner() {
     setSaving(true);
     setError(null);
     try {
-      if (pendingDelete.kind === 'category') {
-        await apiJson(`/api/plans/${planId}/categories/${pendingDelete.id}`, {
-          method: 'DELETE',
-        });
-        const nextCategoryId = data?.categories.find((c) => c.id !== pendingDelete.id)?.id ?? '';
-        setData((prev) => {
-          if (!prev) return prev;
-          const categories = prev.categories.filter((c) => c.id !== pendingDelete.id);
-          const entries = prev.entries.filter((e) => e.category_id !== pendingDelete.id);
-          return { ...prev, categories, entries };
-        });
-        setForm((f) =>
-          f.category_id === pendingDelete.id ? { ...f, category_id: nextCategoryId } : f,
-        );
-      } else {
-        await apiJson(`/api/plans/${planId}/accounts/${pendingDelete.id}`, {
-          method: 'DELETE',
-        });
-        setData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            accounts: prev.accounts.filter((a) => a.id !== pendingDelete.id),
-            entries: prev.entries.map((e) =>
-              e.account_id === pendingDelete.id ? { ...e, account_id: null } : e,
-            ),
-          };
-        });
-        setForm((f) => (f.account_id === pendingDelete.id ? { ...f, account_id: '' } : f));
+      switch (pendingDelete.kind) {
+        case 'category': {
+          await apiJson(`/api/plans/${planId}/categories/${pendingDelete.id}`, {
+            method: 'DELETE',
+          });
+          const nextCategoryId = data?.categories.find((c) => c.id !== pendingDelete.id)?.id ?? '';
+          setData((prev) => {
+            if (!prev) return prev;
+            const categories = prev.categories.filter((c) => c.id !== pendingDelete.id);
+            const entries = prev.entries.filter((e) => e.category_id !== pendingDelete.id);
+            return { ...prev, categories, entries };
+          });
+          setForm((f) =>
+            f.category_id === pendingDelete.id ? { ...f, category_id: nextCategoryId } : f,
+          );
+          break;
+        }
+        case 'account': {
+          await apiJson(`/api/plans/${planId}/accounts/${pendingDelete.id}`, {
+            method: 'DELETE',
+          });
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              accounts: prev.accounts.filter((a) => a.id !== pendingDelete.id),
+              entries: prev.entries.map((e) =>
+                e.account_id === pendingDelete.id ? { ...e, account_id: null } : e,
+              ),
+            };
+          });
+          setForm((f) => (f.account_id === pendingDelete.id ? { ...f, account_id: '' } : f));
+          break;
+        }
+        case 'entry': {
+          await apiJson(`/api/plans/${planId}/entries/${pendingDelete.id}`, { method: 'DELETE' });
+          setSheet('closed');
+          await load();
+          break;
+        }
+        case 'plan': {
+          await apiJson(`/api/plans/${planId}`, { method: 'DELETE' });
+          navigate('/');
+          break;
+        }
+        case 'leave': {
+          await apiJson(`/api/plans/${planId}/leave`, { method: 'POST' });
+          navigate('/');
+          break;
+        }
+        case 'member': {
+          await apiJson(`/api/plans/${planId}/members/${pendingDelete.id}`, { method: 'DELETE' });
+          await load();
+          break;
+        }
+        case 'invite': {
+          await apiJson(`/api/plans/${planId}/invites/${pendingDelete.id}`, { method: 'DELETE' });
+          await load();
+          break;
+        }
+        default: {
+          const _exhaustive: never = pendingDelete;
+          return _exhaustive;
+        }
       }
       setPendingDelete(null);
       setCategoryEditor('closed');
@@ -402,18 +449,9 @@ function PlanPageInner() {
     }
   }
 
-  async function deleteEntry() {
-    if (!planId || !selected) return;
-    setSaving(true);
-    try {
-      await apiJson(`/api/plans/${planId}/entries/${selected.id}`, { method: 'DELETE' });
-      setSheet('closed');
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed');
-    } finally {
-      setSaving(false);
-    }
+  function requestDeleteEntry() {
+    if (!selected) return;
+    setPendingDelete({ kind: 'entry', id: selected.id, name: selected.name });
   }
 
   async function applyReorder(next: {
@@ -469,6 +507,7 @@ function PlanPageInner() {
       });
       const url = `${window.location.origin}${result.invite.acceptPath}`;
       setInviteLink(url);
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invite failed');
     } finally {
@@ -476,10 +515,21 @@ function PlanPageInner() {
     }
   }
 
-  if (loading || !data) {
+  if (loading && !data) {
     return (
       <div className="py-16 text-center">
-        <p className="text-muted text-sm">{error ?? t('app.loading')}</p>
+        <p className="text-muted text-sm">{t('app.loading')}</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 text-center">
+        <p className="text-danger text-sm">{error ?? t('plan.loadFailed')}</p>
+        <Button variant="accent" onClick={() => void load()}>
+          {t('app.retry')}
+        </Button>
       </div>
     );
   }
@@ -546,37 +596,35 @@ function PlanPageInner() {
               >
                 <MaterialSymbol name={organizeMode ? 'check' : 'reorder'} />
               </button>
-              {data.role === 'owner' ? (
-                <button
-                  type="button"
-                  className="icon-toggle-btn"
-                  aria-label={t('app.invite')}
-                  title={t('app.invite')}
-                  onClick={() => {
-                    setInviteLink(null);
-                    setInviteEmail('');
-                    setSheet('invite');
-                  }}
-                >
-                  <MaterialSymbol name="person_add" />
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="icon-toggle-btn"
+                aria-label={t('plan.people')}
+                title={t('plan.people')}
+                onClick={() => {
+                  setInviteLink(null);
+                  setInviteEmail('');
+                  setSheet('invite');
+                }}
+              >
+                <MaterialSymbol name={data.role === 'owner' ? 'person_add' : 'group'} />
+              </button>
             </>
-          ) : editable && data.role === 'owner' ? (
+          ) : (
             <button
               type="button"
               className="icon-toggle-btn"
-              aria-label={t('app.invite')}
-              title={t('app.invite')}
+              aria-label={t('plan.people')}
+              title={t('plan.people')}
               onClick={() => {
                 setInviteLink(null);
                 setInviteEmail('');
                 setSheet('invite');
               }}
             >
-              <MaterialSymbol name="person_add" />
+              <MaterialSymbol name={data.role === 'owner' ? 'person_add' : 'group'} />
             </button>
-          ) : null}
+          )}
         </div>
       </div>
 
@@ -1014,7 +1062,7 @@ function PlanPageInner() {
         </div>
         <div className="modal-actions">
           {sheet === 'edit' ? (
-            <Button variant="danger" disabled={saving} onClick={() => void deleteEntry()}>
+            <Button variant="danger" disabled={saving} onClick={requestDeleteEntry}>
               {t('app.delete')}
             </Button>
           ) : (
@@ -1038,66 +1086,159 @@ function PlanPageInner() {
         ariaLabelledBy="invite-title"
       >
         <h2 id="invite-title" className="text-lg font-semibold">
-          {t('invite.title')}
+          {t('plan.people')}
         </h2>
         {error ? (
           <p className="text-danger mt-3 text-sm" role="alert">
             {error}
           </p>
         ) : null}
-        <div className="mt-4 flex flex-col gap-3">
-          <label className="form-group">
-            <span>{t('invite.email')}</span>
-            <Input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-            />
-          </label>
-          <FormSelect
-            label={t('invite.role')}
-            value={inviteRole}
-            options={[
-              { value: 'viewer', label: t('invite.viewer') },
-              { value: 'editor', label: t('invite.editor') },
-            ]}
-            onChange={(value) => setInviteRole(value as 'viewer' | 'editor')}
-          />
-          {inviteLink ? (
-            <div className="flex flex-col gap-2">
-              <Input readOnly value={inviteLink} />
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(inviteLink);
-                  setCopied(true);
-                  window.setTimeout(() => setCopied(false), 1500);
-                }}
-              >
-                {copied ? t('app.copied') : t('app.copyLink')}
-              </Button>
-              <a
-                className="btn btn-accent text-center"
-                href={`mailto:${encodeURIComponent(inviteEmail)}?subject=${encodeURIComponent(
-                  `Join "${data.plan.name}" on BudgetPlanner`,
-                )}&body=${encodeURIComponent(
-                  `You've been invited to ${inviteRole === 'editor' ? 'edit' : 'view'} "${data.plan.name}".\n\n${inviteLink}\n`,
-                )}`}
-              >
-                mailto
-              </a>
-            </div>
+        <div className="mt-4 flex flex-col gap-4">
+          <section className="flex flex-col gap-2">
+            <h3 className="text-muted text-xs font-semibold tracking-wide uppercase">
+              {t('plan.members')}
+            </h3>
+            <ul className="divide-glass-divider divide-y">
+              {(data.members ?? []).map((member) => (
+                <li key={member.id} className="flex items-center justify-between gap-2 py-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm">{member.email}</div>
+                    <div className="text-muted text-xs">
+                      {member.role === 'owner'
+                        ? t('plan.owner')
+                        : member.role === 'editor'
+                          ? t('invite.editor')
+                          : t('invite.viewer')}
+                    </div>
+                  </div>
+                  {data.role === 'owner' && member.role !== 'owner' ? (
+                    <Button
+                      variant="danger"
+                      disabled={saving}
+                      onClick={() =>
+                        setPendingDelete({ kind: 'member', id: member.id, email: member.email })
+                      }
+                    >
+                      {t('plan.removeMember')}
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {data.role === 'owner' && (data.pendingInvites ?? []).length > 0 ? (
+            <section className="flex flex-col gap-2">
+              <h3 className="text-muted text-xs font-semibold tracking-wide uppercase">
+                {t('plan.pendingInvites')}
+              </h3>
+              <ul className="divide-glass-divider divide-y">
+                {data.pendingInvites.map((invite) => (
+                  <li key={invite.id} className="flex items-center justify-between gap-2 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm">{invite.email}</div>
+                      <div className="text-muted text-xs">
+                        {invite.role === 'editor' ? t('invite.editor') : t('invite.viewer')}
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      disabled={saving}
+                      onClick={() =>
+                        setPendingDelete({ kind: 'invite', id: invite.id, email: invite.email })
+                      }
+                    >
+                      {t('plan.revokeInvite')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
+
+          {data.role === 'owner' ? (
+            <section className="flex flex-col gap-3">
+              <h3 className="text-muted text-xs font-semibold tracking-wide uppercase">
+                {t('invite.title')}
+              </h3>
+              <label className="form-group">
+                <span>{t('invite.email')}</span>
+                <Input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </label>
+              <FormSelect
+                label={t('invite.role')}
+                value={inviteRole}
+                options={[
+                  { value: 'viewer', label: t('invite.viewer') },
+                  { value: 'editor', label: t('invite.editor') },
+                ]}
+                onChange={(value) => setInviteRole(value as 'viewer' | 'editor')}
+              />
+              {inviteLink ? (
+                <div className="flex flex-col gap-2">
+                  <Input id="invite-link-input" readOnly value={inviteLink} />
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      const input = document.getElementById(
+                        'invite-link-input',
+                      ) as HTMLInputElement | null;
+                      const ok = await copyTextToClipboard(inviteLink, input);
+                      if (ok) {
+                        setCopied(true);
+                        window.setTimeout(() => setCopied(false), 1500);
+                      } else {
+                        setError(t('app.copyFailed'));
+                      }
+                    }}
+                  >
+                    {copied ? t('app.copied') : t('app.copyLink')}
+                  </Button>
+                  <a
+                    className="btn btn-accent text-center"
+                    href={`mailto:${encodeURIComponent(inviteEmail)}?subject=${encodeURIComponent(
+                      `Join "${data.plan.name}" on BudgetPlanner`,
+                    )}&body=${encodeURIComponent(
+                      `You've been invited to ${inviteRole === 'editor' ? 'edit' : 'view'} "${data.plan.name}".\n\n${inviteLink}\n`,
+                    )}`}
+                  >
+                    mailto
+                  </a>
+                </div>
+              ) : (
+                <Button variant="accent" disabled={saving} onClick={() => void createInvite()}>
+                  {t('invite.send')}
+                </Button>
+              )}
+            </section>
+          ) : null}
+
+          {data.role === 'owner' ? (
+            <Button
+              variant="danger"
+              disabled={saving}
+              onClick={() => setPendingDelete({ kind: 'plan', name: data.plan.name })}
+            >
+              {t('plan.deletePlan')}
+            </Button>
+          ) : (
+            <Button
+              variant="danger"
+              disabled={saving}
+              onClick={() => setPendingDelete({ kind: 'leave', name: data.plan.name })}
+            >
+              {t('plan.leave')}
+            </Button>
+          )}
         </div>
         <div className="modal-actions">
           <Button variant="cancel" onClick={() => setSheet('closed')}>
             {t('app.cancel')}
           </Button>
-          {!inviteLink ? (
-            <Button variant="accent" disabled={saving} onClick={() => void createInvite()}>
-              {t('invite.send')}
-            </Button>
-          ) : null}
         </div>
       </Modal>
 
@@ -1115,7 +1256,17 @@ function PlanPageInner() {
             <h2 id="delete-confirm-title" className="text-lg font-semibold">
               {pendingDelete.kind === 'category'
                 ? t('plan.deleteCategory')
-                : t('plan.deleteAccount')}
+                : pendingDelete.kind === 'account'
+                  ? t('plan.deleteAccount')
+                  : pendingDelete.kind === 'entry'
+                    ? t('app.delete')
+                    : pendingDelete.kind === 'plan'
+                      ? t('plan.deletePlan')
+                      : pendingDelete.kind === 'leave'
+                        ? t('plan.leave')
+                        : pendingDelete.kind === 'member'
+                          ? t('plan.removeMember')
+                          : t('plan.revokeInvite')}
             </h2>
             <p className="text-muted mt-3 text-sm">
               {pendingDelete.kind === 'category'
@@ -1125,7 +1276,17 @@ function PlanPageInner() {
                       count: pendingDelete.entryCount,
                     })
                   : t('plan.deleteCategoryConfirmEmpty', { name: pendingDelete.name })
-                : t('plan.deleteAccountConfirm', { name: pendingDelete.name })}
+                : pendingDelete.kind === 'account'
+                  ? t('plan.deleteAccountConfirm', { name: pendingDelete.name })
+                  : pendingDelete.kind === 'entry'
+                    ? t('entry.deleteConfirm', { name: pendingDelete.name })
+                    : pendingDelete.kind === 'plan'
+                      ? t('plan.deletePlanConfirm', { name: pendingDelete.name })
+                      : pendingDelete.kind === 'leave'
+                        ? t('plan.leaveConfirm', { name: pendingDelete.name })
+                        : pendingDelete.kind === 'member'
+                          ? t('plan.removeMemberConfirm', { email: pendingDelete.email })
+                          : t('plan.revokeInviteConfirm', { email: pendingDelete.email })}
             </p>
             {error ? (
               <p className="text-danger mt-3 text-sm" role="alert">
@@ -1147,7 +1308,13 @@ function PlanPageInner() {
                 disabled={saving}
                 onClick={() => void confirmPendingDelete()}
               >
-                {t('app.delete')}
+                {pendingDelete.kind === 'leave'
+                  ? t('plan.leave')
+                  : pendingDelete.kind === 'invite'
+                    ? t('plan.revokeInvite')
+                    : pendingDelete.kind === 'member'
+                      ? t('plan.removeMember')
+                      : t('app.delete')}
               </Button>
             </div>
           </>

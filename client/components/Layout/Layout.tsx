@@ -18,6 +18,7 @@ import { LOCALES, setUserLocale, syncLocaleFromServer, type AppLocale } from '..
 import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
 import { HexSideBackground } from './HexSideBackground';
+import { PlanSwitcher } from './PlanSwitcher';
 
 function ClerkTokenBridge() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -105,6 +106,7 @@ export function Layout() {
           </Link>
 
           <div className="flex items-center justify-end gap-2">
+            {clerkEnabled ? <PlanSwitcher /> : null}
             <button
               type="button"
               className="icon-toggle-btn"

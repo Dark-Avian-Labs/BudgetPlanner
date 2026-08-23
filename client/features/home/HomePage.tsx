@@ -35,14 +35,11 @@ function HomeInner() {
         }>('/api/plans');
         setPlans(data.plans);
         setMe(data.me);
-        if (data.defaultPlanId) {
-          navigate(planPath(data.defaultPlanId), { replace: true });
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
       }
     })();
-  }, [isLoaded, isSignedIn, navigate]);
+  }, [isLoaded, isSignedIn]);
 
   async function createPlan() {
     setCreating(true);

@@ -1,80 +1,54 @@
 ---
 type: Architecture Overview
 title: Project Structure
-description: Directory layout, the server/client split, path aliases, and the TypeScript/Vite build topology for AppBase.
-tags: [architecture, structure, vite, typescript]
-timestamp: 2026-07-21T00:00:00Z
+description: Directory layout, the server/client split, and how plan code is shared.
+tags: [architecture, structure]
+timestamp: 2026-08-23T04:20:00Z
 ---
 
 # Overview
 
-AppBase is a single-package app (not a monorepo) with a clear server/client split under one root.
-The server is a small Express app; the client is a Vite-built React SPA served as static files in
-production. This page maps the tree and the build wiring; runtime behavior lives in
-[server runtime](server-runtime.md) and the UI layer in [design system](design-system.md).
+BudgetPlanner is a single-package app: Express API plus a Vite React SPA. Domain logic lives next to the HTTP layer, with due-date math in `shared/` so the client and server stay aligned. Runtime behavior is in [server runtime](server-runtime.md). Plan writes are in [plans and sharing](../workflows/plans-and-sharing.md).
 
 # Directory map
 
 ```
-server/                 Express API + static host
-├── index.ts            App entry: middleware chain, routes, listen, shutdown
-├── config.ts           Env-derived config + PROJECT_ROOT/DATA_DIR resolution
-├── routes/api.ts       /api router (/health, /csrf)
-├── db/connection.ts    Lazy better-sqlite3 session DB (WAL)
-├── db/sessionSchema.ts CREATE TABLE sessions + index
-└── types/              express-session type augmentation
+server/
+├── index.ts              Boot, middleware, listen, crash/shutdown
+├── config.ts             dotenvx env + PORT/HOST/paths
+├── routes/api.ts         Health + mount
+├── routes/plans.ts       Plan CRUD, members, invites, entries
+├── lib/planValidation.ts Currency, names, cents, year, same-plan IDs
+├── lib/dueThisMonth.ts   Server wrapper around shared due math
+├── services/users.ts     Clerk user upsert + invite email
+├── db/appSchema.ts       plans, members, invites, categories, accounts, entries
+├── db/sqliteSessionStore.ts
+└── http/helmetCsp.ts
 
-client/                 React SPA
-├── main.tsx            Root render: BrowserRouter + ThemeProvider
-├── App.tsx             Renders AppRoutes
-├── app/                Routing only: config.ts, paths.ts, routes.tsx
-├── features/           Page UI (home, legal)
-├── components/Layout/  Shell: Layout, backgrounds, SearchBar
-├── components/ui/       Shared primitives (Button, Modal, Menu, …)
-├── context/            ThemeContext (theme + UI style)
-├── lib/asciiBackground/ Canvas ASCII wave helpers
-├── styles/input.css    ALL design tokens + component classes (Tailwind v4)
-└── clerk/              Optional Clerk styling (not wired by default)
+client/
+├── features/plan/        Plan page, organize mode, delete confirms
+├── features/invite/      Accept invite
+├── features/home/        Plan list
+├── features/auth/        Sign-in / sign-up
+├── components/Layout/    Shell + PlanSwitcher
+└── lib/dueThisMonth.ts   Client wrapper around shared due math
 
-scripts/                dev.mjs (dual dev), runtime-preflight.mjs
-docs/org-standards/     DAL engineering conventions
-assets/, public/        Fonts/art assets and theme-init.js
-run-quality-checks.mjs  pnpm run validate entrypoint
+shared/dueThisMonth.ts    Canonical due-this-month rules
+scripts/                  dev.mjs, runtime-preflight.mjs, backup-app-db.mjs
 ```
 
 # Server/client boundary
 
-There is one process in production: the Express server serves `dist/client` as static assets and
-falls back to `index.html` for client-side routing (`server/index.ts:156`). The client talks to the
-server only through `/api` (`client/utils/api.ts`, `server/routes/api.ts`). In development the two
-run as separate processes with a Vite proxy — see
-[development & build](workflows/development-and-build.md).
-
-# Path aliases and TypeScript projects
-
-- Vite aliases `@` → `client/` (`vite.config.ts:20`); imports like `@/context/ThemeContext` resolve
-  there.
-- Two TypeScript projects compile independently: `tsconfig.server.json` (server, emits to `dist/`)
-  and `tsconfig.json` (client, `--noEmit`). `pnpm run typecheck` runs both (`package.json:8`).
-- `PROJECT_ROOT` is computed relative to the compiled file location so paths work both from source
-  (`server/`) and from `dist/` (`server/config.ts:7`).
-
-# Build topology
-
-`pnpm run build` = typecheck → `tsc -p tsconfig.server.json` (server → `dist/server`) → `vite build`
-(client → `dist/client`, per `vite.config.ts:24`). The two outputs live side by side under `dist/`
-and are wired together at runtime by [server runtime](server-runtime.md). Depends on the scripts and
-proxy documented in [development & build](workflows/development-and-build.md).
+Production Express serves `dist/client` and falls back to `index.html`. The client talks only through `/api` (`client/utils/api.ts`). Dev is two processes with a Vite `/api` proxy — see [configuration](../operations/configuration.md) for the 3001 vs 3002 trap.
 
 # Where to start
 
 - Server entry: `server/index.ts`
 - Client entry: `client/main.tsx` → `client/app/routes.tsx`
-- Build config: `vite.config.ts`, `tsconfig.server.json`
+- Write validation: `server/lib/planValidation.ts`
+- Schema: `server/db/appSchema.ts`
 
 # What to watch out for
 
-- **`PROJECT_ROOT` depends on the `dist` folder name.** `config.ts` checks whether its parent
-  directory is `dist` to decide the root; renaming the output dir would break asset resolution
-  (`server/config.ts:7`).
-- **`@` alias is Vite-only.** Server code uses relative `.js` imports (ESM), not the `@` alias.
+- `shared/dueThisMonth.ts` is the source of truth. Do not fork the rules in only one wrapper.
+- `@` alias is Vite-only. Server code uses relative `.js` imports.

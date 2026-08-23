@@ -78,6 +78,10 @@ const DEFAULT_SESSION_SECRET = 'budgetplanner-dev-secret-change-me';
 export const SESSION_SECRET = process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 
+const _shutdownTimeoutMs = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '10000', 10);
+export const SHUTDOWN_TIMEOUT_MS =
+  Number.isFinite(_shutdownTimeoutMs) && _shutdownTimeoutMs > 0 ? _shutdownTimeoutMs : 10_000;
+
 if (NODE_ENV === 'production' && SESSION_SECRET === DEFAULT_SESSION_SECRET) {
   console.error(
     '[FATAL] SESSION_SECRET must be set in production. Refusing to start with the default secret.',
