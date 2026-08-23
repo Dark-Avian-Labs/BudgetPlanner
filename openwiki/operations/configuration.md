@@ -1,70 +1,43 @@
 ---
 type: Operations Guide
 title: Configuration
-description: Environment variables, defaults, and the session/security invariants enforced at server startup.
-tags: [operations, configuration, env, security, sessions]
-timestamp: 2026-07-21T00:00:00Z
+description: dotenvx env files, the 3001 vs 3002 port trap, and startup invariants.
+tags: [operations, env, dotenvx]
+timestamp: 2026-08-23T04:20:00Z
 ---
 
 # Overview
 
-Configuration is entirely environment-driven. The server reads and validates env in
-`server/config.ts`; the client reads `VITE_*` variables at build time. `.env.example` is the
-template — copy it to `.env`. **Never commit real secrets**; `.env.example` holds placeholders only.
+`server/config.ts` loads `.env.keys` (if present) then `.env.<NODE_ENV>` via dotenvx. Values already in `process.env` win. Never commit `.env.keys`. Template: `.env.example`.
 
-# Server variables
+# Ports
 
-| Variable              | Default                        | Purpose                                                 |
-| --------------------- | ------------------------------ | ------------------------------------------------------- |
-| `PORT`                | `3001`                         | Listen port (`.env.example` uses `3002`).               |
-| `HOST`                | `127.0.0.1`                    | Bind address.                                           |
-| `NODE_ENV`            | `development`                  | Enables production invariants when `production`.        |
-| `APP_NAME`            | `AppBase`                      | Display name in logs/health responses.                  |
-| `APP_ID`              | `appbase`                      | Prefix for the default session cookie name.             |
-| `SESSION_SECRET`      | `appbase-dev-secret-change-me` | Session signing key; **must** be overridden in prod.    |
-| `SESSION_COOKIE_NAME` | `<APP_ID>.sid`                 | Session cookie key.                                     |
-| `TRUST_PROXY`         | off                            | `1`/`true` to trust `X-Forwarded-*` behind a proxy.     |
-| `SECURE_COOKIES`      | off                            | `1`/`true` to mark the session cookie `Secure`.         |
-| `COOKIE_DOMAIN`       | unset                          | Optional shared cookie domain.                          |
-| `SESSION_DB_PATH`     | `<root>/data/sessions.db`      | SQLite session store path (`CENTRAL_DB_PATH` fallback). |
+| Source                         | Default |
+| ------------------------------ | ------- |
+| `server/config.ts` `PORT`      | **3001** |
+| `.env.example` `PORT`          | **3002** |
+| Vite / `scripts/dev.mjs` proxy | **3002** |
 
-Values are read in `server/config.ts`; the port is validated to a positive integer and falls back to
-`3001` (`server/config.ts:13`).
+Keep `PORT` and `VITE_DEV_API_TARGET` on the same origin. The README curl examples still say 3002.
 
-# Startup invariants
+# Important variables
 
-Two guards can stop the server before it accepts traffic:
+| Variable              | Notes                                                                 |
+| --------------------- | --------------------------------------------------------------------- |
+| `SESSION_SECRET`      | Production refuses the built-in default.                              |
+| `SESSION_DB_PATH`     | CSRF sessions. Prefer absolute in production.                         |
+| `APP_DB_PATH`         | Plans database. Prefer absolute in production.                        |
+| `COOKIE_DOMAIN`       | `.darkavianlabs.com` in production so DAL apps share login.           |
+| `TRUST_PROXY`         | Required in production when `SECURE_COOKIES` is on.                   |
+| `SHUTDOWN_TIMEOUT_MS` | Default 10000.                                                        |
+| Clerk keys            | Missing keys → auth routes 503. Production should set real keys.      |
+| `VITE_*`              | Stay plaintext. Encrypting them garbles `vite build`.                 |
 
-- **Production secret guard** — with `NODE_ENV=production` and the default `SESSION_SECRET`, the
-  process logs `[FATAL]` and exits `1` (`server/config.ts:20`).
-- **Secure-cookie/proxy guard** — production + `SECURE_COOKIES` without `TRUST_PROXY` throws
-  (`server/index.ts:41`), because a secure cookie behind an unrecognized proxy would never be set.
+# Dev vs production
 
-These enforce the security posture described in
-[server runtime](../architecture/server-runtime.md).
-
-# Client (Vite) variables
-
-Build-time `VITE_*` values (see `.env.example`, `client/app/config.ts`, `vite.config.ts`):
-
-- `VITE_APP_NAME`, `VITE_LEGAL_ENTITY_NAME`, `VITE_SEARCH_PLACEHOLDER` — shell text, with in-code
-  fallbacks (`client/app/config.ts`).
-- `VITE_BASE_PATH` — client base path for nested deployments.
-- `VITE_DEV_API_TARGET`, `VITE_DEV_PORT` — dev proxy target and Vite port
-  ([development & build](../workflows/development-and-build.md)).
-- `VITE_SHARED_THEME_COOKIE_DOMAIN` — domain for the shared `dal.*` theme cookies so theme choices
-  sync across subdomains ([design system](../architecture/design-system.md)).
-
-# Where to start
-
-- `server/config.ts` — server env + invariants
-- `.env.example` — the full template
-- `client/app/config.ts` — client-side env fallbacks
+`pnpm dev` runs `dotenvx run -f .env.development -- node scripts/dev.mjs` (Vite + `tsx watch`). `pnpm start` runs `node dist/server/index.js` and expects `NODE_ENV` from the process manager.
 
 # What to watch out for
 
-- **Set a strong `SESSION_SECRET` in production** or the server will not start.
-- **`PORT` vs the dev proxy.** The code default is `3001`; the dev proxy and `.env.example` assume
-  `3002`. Keep `PORT` and `VITE_DEV_API_TARGET` aligned.
-- **`SESSION_DB_PATH` should be absolute in production**, on a writable volume — the store is created
-  on first start.
+- Two SQLite paths. Do not reuse Armory/Codex session files.
+- `pnpm run db:backup` (`scripts/backup-app-db.mjs`) copies `APP_DB_PATH` only.

@@ -1,5 +1,5 @@
 ---
-okf_version: '0.1'
+okf_version: "0.1"
 ---
 
 # OpenWiki
@@ -8,19 +8,19 @@ okf_version: '0.1'
 
 # Architecture
 
-- [Project Structure](architecture/project-structure.md) — Directory map, server/client split, and build topology
-- [Server Runtime](architecture/server-runtime.md) — Express middleware chain, security, sessions, health, shutdown
-- [DAL Design System](architecture/design-system.md) — Theme model, glass surfaces, tokens, primitives, backgrounds
+- [Project structure](architecture/project-structure.md) — Directory map and server/client split
+- [Server runtime](architecture/server-runtime.md) — Express middleware, sessions, CSRF, health, shutdown
+- [DAL design system](architecture/design-system.md) — Theme model, glass surfaces, tokens
 
 # Workflows
 
-- [Development & Build](workflows/development-and-build.md) — Dev/build/start scripts and the Vite proxy
+- [Plans and sharing](workflows/plans-and-sharing.md) — Plans, money, invites, and write validation
 
 # Operations
 
-- [Configuration](operations/configuration.md) — Environment variables and startup invariants
-- [Validate & CI](operations/validate-and-ci.md) — Quality gate, runtime preflight, tests, and org CI standards
+- [Configuration](operations/configuration.md) — Env files, ports, and startup invariants
+- [Validate and CI](operations/validate-and-ci.md) — Quality gate, tests, frozen lockfile
 
 # Integrations
 
-- [Clerk Authentication Styling](integrations/clerk.md) — Optional glass-themed Clerk auth (not wired by default)
+- [Clerk authentication](integrations/clerk.md) — Wired Clerk stack and glass appearance

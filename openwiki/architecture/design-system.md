@@ -3,16 +3,15 @@ type: Architecture Overview
 title: DAL Design System
 description: The two-axis theme model, glass-surface component contracts, design tokens, UI primitives, theme boot/persistence, and layered shell backgrounds.
 tags: [design-system, theming, tailwind, ui, glass]
-timestamp: 2026-07-21T00:00:00Z
+timestamp: 2026-08-23T04:20:00Z
 ---
 
 # Overview
 
-AppBase ships the **DAL design system**: a frosted-glass UI driven by two independent axes, a single
-token stylesheet, and a small set of primitives that sibling apps mirror manually. The canonical,
-exhaustive contract (token names, class names, porting checklist) lives in the root **`AGENTS.md`**;
-this page is the map into it and the code that implements it. Optional auth styling extends this
-system in [Clerk integration](../integrations/clerk.md).
+BudgetPlanner uses the **DAL design system** (same tokens and classes as AppBase, Armory, and Codex).
+A frosted-glass UI on two independent axes, one token stylesheet (`client/styles/input.css`), and
+primitives mirrored by hand. Auth styling is in [Clerk integration](../integrations/clerk.md).
+AppBase `AGENTS.md` still has the full token/class contract if you need to port a new control.
 
 # Two-axis theme model
 
@@ -58,7 +57,7 @@ All design tokens and component classes live in **`client/styles/input.css`** (T
 `html:not(.dark)`; Shadow, Clear, and Acrylic override via `html.ui-shadow` / `html.ui-clear` /
 `html.ui-acrylic` blocks. Acrylic tiles `client/styles/acrylic-noise.svg` and maps exclusion/noise
 onto surface `::before` / `::after`. See
-`AGENTS.md` → "CSS architecture" for the full token list (`--color-*`, `--radius-ui*`,
+AppBase `AGENTS.md` → "CSS architecture" for the full token list (`--color-*`, `--radius-ui*`,
 `--shadow-panel`, ASCII/hex tokens, etc.).
 
 # Component contracts and primitives
@@ -71,7 +70,7 @@ Use the shared class names and primitives rather than inventing one-offs:
 - Primitives in `client/components/ui/`: `Button`, `Input`, `GlassCard`, `Modal`, `Menu`,
   `SelectDropdown`, `UiStyleSelector`, `MaterialSymbol`.
 
-`AGENTS.md` → "Component contracts" / "UI primitives" is the authoritative table.
+AppBase `AGENTS.md` → "Component contracts" / "UI primitives" is the authoritative table.
 
 # Shell backgrounds
 
@@ -87,13 +86,13 @@ files as a unit when porting.
 - Shell + backgrounds: `client/components/Layout/`
 - Primitives: `client/components/ui/`
 - Tokens/classes: `client/styles/input.css`
-- Full contract: root `AGENTS.md`
+- Full contract: AppBase `AGENTS.md`
 
 # What to watch out for
 
 - **No shared UI package.** Token, glass, or component-class changes must be mirrored into Codex
-  (`packages/core/src/input.css`) and Armory (`client/styles/input.css`) by hand — `AGENTS.md`
-  keeps the checklist.
+  (`packages/core/src/input.css`) and Armory (`client/styles/input.css`) by hand — AppBase
+  `AGENTS.md` keeps the checklist.
 - **Keep exactly one `ui-*` class on `<html>`** plus optional `dark`; `ThemeProvider` enforces this
   by removing the others before adding the active one.
 - **Acrylic blur dies** if a parent has `opacity < 1`, `filter`, `mask`, `clip-path`, or its own
