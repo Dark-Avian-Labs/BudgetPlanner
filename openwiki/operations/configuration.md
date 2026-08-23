@@ -12,8 +12,8 @@ timestamp: 2026-08-23T04:20:00Z
 
 # Ports
 
-| Source                         | Default |
-| ------------------------------ | ------- |
+| Source                         | Default  |
+| ------------------------------ | -------- |
 | `server/config.ts` `PORT`      | **3001** |
 | `.env.example` `PORT`          | **3002** |
 | Vite / `scripts/dev.mjs` proxy | **3002** |
@@ -22,16 +22,16 @@ Keep `PORT` and `VITE_DEV_API_TARGET` on the same origin. The README curl exampl
 
 # Important variables
 
-| Variable              | Notes                                                                 |
-| --------------------- | --------------------------------------------------------------------- |
-| `SESSION_SECRET`      | Production refuses the built-in default.                              |
-| `SESSION_DB_PATH`     | CSRF sessions. Prefer absolute in production.                         |
-| `APP_DB_PATH`         | Plans database. Prefer absolute in production.                        |
-| `COOKIE_DOMAIN`       | `.darkavianlabs.com` in production so DAL apps share login.           |
-| `TRUST_PROXY`         | Required in production when `SECURE_COOKIES` is on.                   |
-| `SHUTDOWN_TIMEOUT_MS` | Default 10000.                                                        |
-| Clerk keys            | Missing keys → auth routes 503. Production should set real keys.      |
-| `VITE_*`              | Stay plaintext. Encrypting them garbles `vite build`.                 |
+| Variable              | Notes                                                            |
+| --------------------- | ---------------------------------------------------------------- |
+| `SESSION_SECRET`      | Production refuses the built-in default.                         |
+| `SESSION_DB_PATH`     | CSRF sessions. Prefer absolute in production.                    |
+| `APP_DB_PATH`         | Plans database. Prefer absolute in production.                   |
+| `COOKIE_DOMAIN`       | `.darkavianlabs.com` in production so DAL apps share login.      |
+| `TRUST_PROXY`         | Required in production when `SECURE_COOKIES` is on.              |
+| `SHUTDOWN_TIMEOUT_MS` | Default 10000.                                                   |
+| Clerk keys            | Missing keys → auth routes 503. Production should set real keys. |
+| `VITE_*`              | Stay plaintext. Encrypting them garbles `vite build`.            |
 
 # Dev vs production
 

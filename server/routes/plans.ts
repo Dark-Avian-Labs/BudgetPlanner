@@ -108,11 +108,11 @@ function archiveExpiredOnceEntries(db: ReturnType<typeof getAppDb>, planId: stri
        WHERE plan_id = ? AND frequency = 'once' AND archived_at IS NULL`,
     )
     .all(planId) as Array<{
-      id: string;
-      frequency: EntryFrequency;
-      due_month: number | null;
-      due_year: number | null;
-    }>;
+    id: string;
+    frequency: EntryFrequency;
+    due_month: number | null;
+    due_year: number | null;
+  }>;
 
   const archive = db.prepare(
     `UPDATE entries SET archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
@@ -920,12 +920,12 @@ invitesRouter.get('/:token', requireAuth, (req: Request, res: Response) => {
     )
     .get(token) as
     | {
-      role: 'editor' | 'viewer';
-      expires_at: string;
-      accepted_at: string | null;
-      plan_name: string;
-      currency: string;
-    }
+        role: 'editor' | 'viewer';
+        expires_at: string;
+        accepted_at: string | null;
+        plan_name: string;
+        currency: string;
+      }
     | undefined;
 
   if (!row) {
@@ -960,13 +960,13 @@ invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) 
     )
     .get(token) as
     | {
-      id: string;
-      plan_id: string;
-      email: string;
-      role: 'editor' | 'viewer';
-      expires_at: string;
-      accepted_at: string | null;
-    }
+        id: string;
+        plan_id: string;
+        email: string;
+        role: 'editor' | 'viewer';
+        expires_at: string;
+        accepted_at: string | null;
+      }
     | undefined;
 
   if (!invite) {

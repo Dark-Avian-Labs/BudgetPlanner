@@ -12,15 +12,15 @@ A plan is a shared household budget. The owner invites people by email as `edito
 
 # Where to start
 
-| Concern        | Path                                      |
-| -------------- | ----------------------------------------- |
-| HTTP           | `server/routes/plans.ts`                  |
-| Write rules    | `server/lib/planValidation.ts`            |
-| Schema         | `server/db/appSchema.ts`                  |
-| Users/invites  | `server/services/users.ts`                |
-| UI             | `client/features/plan/PlanPage.tsx`       |
-| Plan switcher  | `client/components/Layout/PlanSwitcher.tsx` |
-| Invite accept  | `client/features/invite/InvitePage.tsx`   |
+| Concern       | Path                                        |
+| ------------- | ------------------------------------------- |
+| HTTP          | `server/routes/plans.ts`                    |
+| Write rules   | `server/lib/planValidation.ts`              |
+| Schema        | `server/db/appSchema.ts`                    |
+| Users/invites | `server/services/users.ts`                  |
+| UI            | `client/features/plan/PlanPage.tsx`         |
+| Plan switcher | `client/components/Layout/PlanSwitcher.tsx` |
+| Invite accept | `client/features/invite/InvitePage.tsx`     |
 
 # Data model
 
