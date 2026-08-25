@@ -2,42 +2,41 @@
 
 ## Org standards
 
-Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, validate, release tracks, OpenWiki) live in AppBase [`docs/org-standards/`](../AppBase/docs/org-standards/). Prefer those docs when aligning workflows or quality gates.
+Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, validate, release tracks) live in AppBase [`docs/org-standards/`](../AppBase/docs/org-standards/). The design system (theme axes, glass contracts, UI primitives, Clerk appearance) lives in AppBase [`AGENTS.md`](../AppBase/AGENTS.md). There is no shared UI package: when you change layout, glass, buttons, or modals here, apply the same change in AppBase / Codex / Armory.
 
 ## Overview
 
-BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Clerk handles sign-in. Plans, categories, accounts, and entries live in SQLite (`APP_DB_PATH`); Express sessions for CSRF live in a second SQLite file (`SESSION_DB_PATH`).
+BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Clerk is identity only. Plan membership, invites, and roles live in app SQLite (`plan_members`); this is not Clerk Organizations.
 
-## Running the service
+Default listen port in code is **3001**. `.env.example` and the Vite proxy default to **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
 
-See `README.md` for scripts. Encrypted env files:
+## Money and plans
 
-```bash
-NODE_ENV=development pnpm dotenvx run -f .env.development -- node dist/server/index.js
-```
+Money is stored as **integer cents**. Category and account IDs on writes must belong to the same plan (`server/lib/planValidation.ts`). `shared/dueThisMonth.ts` is the source of truth for this-month math; do not fork the rules in only the client or only the server wrapper.
 
-Without the private key, copy `.env.example` to `.env.development` and fill Clerk keys.
+Cadence includes monthly, quarterly, half-yearly, yearly, and `once`. Expired `once` entries are auto-archived on plan load. Credits can use `final_amount_cents` for the last installment.
 
-Default listen port in code is **3001**. `.env.example` and the Vite proxy default to **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned.
+Roles are owner / editor / viewer. Invites are editor or viewer only; viewers cannot mutate. Invite accept requires the signed-in Clerk user's email to match the invite row (case-insensitive); mismatch is 403. The owner cannot leave: they delete the plan instead. Archived entries are soft-deleted (`archived_at`); this-month math and listings skip them.
 
-## Key gotchas
+## Databases
 
-- **Node >= 26 and pnpm >= 11 required.** `packageManager` must stay an exact version.
-- Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`.
-- Clerk keys are required for auth routes; without them those routes return 503.
-- Money is stored as **cents**. Category and account IDs on writes must belong to the same plan (`server/lib/planValidation.ts`).
-- `pnpm run db:backup` copies `APP_DB_PATH` via `scripts/backup-app-db.mjs`.
-- UI tokens are mirrored with AppBase / Codex / Armory (no shared UI package).
-- On Windows, Cursor agent shells may prepend Node 22. After changing Node versions, run `pnpm rebuild better-sqlite3`.
+Two SQLite files. Do not point them at the same path, and do not reuse Armory or Codex session/catalog files.
 
-## OpenWiki
+| File    | Env               | Role                                           |
+| ------- | ----------------- | ---------------------------------------------- |
+| App     | `APP_DB_PATH`     | Plans, members, categories, accounts, entries. |
+| Session | `SESSION_DB_PATH` | Express sessions / CSRF.                       |
 
-This repository has documentation located in the /openwiki directory.
+`pnpm run db:backup` copies `APP_DB_PATH` only (`scripts/backup-app-db.mjs`).
 
-Start here:
+## Auth
 
-- [OpenWiki quickstart](openwiki/quickstart.md)
+Clerk keys are required for auth routes; without them those routes return **503** (the server still starts). That differs from Armory/Codex, where placeholder keys 500 every request. Leave keys empty or fill real ones; do not copy placeholder keys from those apps.
 
-OpenWiki includes repository overview, architecture notes, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
+Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a login. Keep `VITE_*` plaintext; encrypting them garbles `vite build`. If you add app roles later, configure the Clerk session token with `"metadata": "{{user.public_metadata}}"` (`apps.budgetplanner`).
 
-When working in this repository, read the OpenWiki quickstart first, then follow its links to the relevant architecture, workflow, domain, operation, and testing notes.
+## Toolchain
+
+Node **26+**, pnpm **11.x**, exact `packageManager`. Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`. `pnpm run validate` is the quality gate.
+
+On Windows, Cursor agent shells may prepend bundled Node 22. After changing Node versions, run `pnpm rebuild better-sqlite3`.
