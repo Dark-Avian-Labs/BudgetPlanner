@@ -30,3 +30,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.3.4** `chore` [#27](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/27): chore/deps material symbols and tsx
 - **v1.4.0** `chore` [#28](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/28): feat/plan month selector
 - **v1.5.0** `chore` [#29](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/29): feat/plan month picker and auth
+- **v1.5.1** `chore` [#30](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/30): audit/fable
