@@ -10,8 +10,10 @@ apiRouter.get('/health', (_req: Request, res: Response) => {
 });
 
 apiRouter.get('/csrf', (req: Request, res: Response) => {
-  const token = (res.locals as { csrfToken?: string }).csrfToken ?? req.session.csrfToken;
-  res.json({ csrfToken: token ?? '' });
+  const generate = req.app.locals.generateCsrfToken as ((request: Request) => string) | undefined;
+  const token = generate ? generate(req) : (req.session.csrfToken ?? '');
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ csrfToken: token });
 });
 
 apiRouter.use('/me', meRouter);

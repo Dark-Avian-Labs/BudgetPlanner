@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { clerkMiddleware } from '@clerk/express';
+import { clerkMiddleware, getAuth } from '@clerk/express';
 import cookieParser from 'cookie-parser';
 import { csrfSync } from 'csrf-sync';
 import express from 'express';
@@ -30,8 +30,10 @@ import { createAppSchema } from './db/appSchema.js';
 import { closeAppDb, closeSessionDb, getAppDb, getSessionDb } from './db/connection.js';
 import { createSessionSchema } from './db/sessionSchema.js';
 import { SqliteSessionStore } from './db/sqliteSessionStore.js';
+import { errorHandler } from './http/errorHandler.js';
 import { createAppHelmet } from './http/helmetCsp.js';
 import { apiRouter } from './routes/api.js';
+import { bindClerkUserSessionMiddleware } from './session/bindClerkUserSession.js';
 
 ensureDataDirs();
 
@@ -55,6 +57,20 @@ app.use(createAppHelmet({ hsts: NODE_ENV === 'production' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 app.use(cookieParser());
+
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok', app: APP_NAME });
+});
+
+app.get('/readyz', (_req, res) => {
+  try {
+    sessionDb.prepare('SELECT 1').get();
+    appDb.prepare('SELECT 1').get();
+    res.json({ status: 'ready', app: APP_NAME });
+  } catch {
+    res.status(503).json({ status: 'not_ready', app: APP_NAME });
+  }
+});
 
 if (CLERK_CONFIGURED) {
   app.use(clerkMiddleware());
@@ -120,11 +136,22 @@ const { csrfSynchronisedProtection, generateToken } = csrfSync({
 });
 
 app.use(csrfSynchronisedProtection);
-
-app.use((req, res, next) => {
-  (res.locals as { csrfToken?: string }).csrfToken = generateToken(req);
-  next();
-});
+app.locals.generateCsrfToken = generateToken;
+app.use(
+  '/api',
+  bindClerkUserSessionMiddleware(
+    (req) => {
+      if (!CLERK_CONFIGURED) return null;
+      return getAuth(req).userId ?? null;
+    },
+    (req) => {
+      const generate = req.app.locals.generateCsrfToken as
+        | ((request: express.Request, overwrite?: boolean) => string)
+        | undefined;
+      generate?.(req, true);
+    },
+  ),
+);
 
 const appApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -145,20 +172,6 @@ const staticAssetLimiter = rateLimit({
   max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
-});
-
-app.get('/healthz', (_req, res) => {
-  res.json({ status: 'ok', app: APP_NAME });
-});
-
-app.get('/readyz', (_req, res) => {
-  try {
-    sessionDb.prepare('SELECT 1').get();
-    appDb.prepare('SELECT 1').get();
-    res.json({ status: 'ready', app: APP_NAME });
-  } catch {
-    res.status(503).json({ status: 'not_ready', app: APP_NAME });
-  }
 });
 
 app.get('/api/version', (_req, res) => {
@@ -220,35 +233,7 @@ app.use(publicPageLimiter, (req, res, next) => {
   sendSpaIndex(res);
 });
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const message = err.message || '';
-  const lowerMessage = message.toLowerCase();
-  const errorCode = (err as { code?: string }).code;
-  const statusCode =
-    (err as { status?: number; statusCode?: number }).status ??
-    (err as { status?: number; statusCode?: number }).statusCode;
-  const isNamedCsrfError =
-    err.name === 'CsrfError' || (err.constructor && err.constructor.name === 'CsrfError');
-  const isForbiddenError =
-    err.name === 'ForbiddenError' || (err.constructor && err.constructor.name === 'ForbiddenError');
-  const isCsrfError =
-    isNamedCsrfError ||
-    errorCode === 'EBADCSRFTOKEN' ||
-    (isForbiddenError && lowerMessage.includes('csrf'));
-  if (isCsrfError) {
-    res.setHeader('X-CSRF-Error', '1');
-    res.status(403).json({ error: 'Invalid CSRF token', code: 'CSRF_INVALID' });
-    return;
-  }
-  const status =
-    typeof statusCode === 'number' && statusCode >= 400 && statusCode < 600 ? statusCode : 500;
-  console.error('[Error]', err.stack ?? err.message);
-  if (status >= 500) {
-    res.status(status).json({ error: 'Internal server error' });
-    return;
-  }
-  res.status(status).json({ error: message || 'Request failed' });
-});
+app.use(errorHandler);
 
 const server = app.listen(PORT, HOST, () => {
   console.log(`[${APP_NAME}] Server running on http://${HOST}:${PORT} (${NODE_ENV})`);
@@ -284,6 +269,13 @@ function shutdown(baseExitCode = 0): void {
     }
     closeAndExit(baseExitCode);
   });
+  server.closeIdleConnections();
+  setTimeout(
+    () => {
+      server.closeAllConnections();
+    },
+    Math.max(0, SHUTDOWN_TIMEOUT_MS - 500),
+  );
 }
 
 process.on('SIGINT', () => shutdown(0));

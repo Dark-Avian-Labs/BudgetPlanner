@@ -20,6 +20,7 @@ function HomeInner() {
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [name, setName] = useState('Household');
   const [currency, setCurrency] = useState('EUR');
   const [creating, setCreating] = useState(false);
@@ -37,6 +38,8 @@ function HomeInner() {
         setMe(data.me);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
+      } finally {
+        setLoading(false);
       }
     })();
   }, [isLoaded, isSignedIn]);
@@ -66,9 +69,13 @@ function HomeInner() {
 
       {error ? <p className="text-danger text-sm">{error}</p> : null}
 
-      {plans.length > 0 ? (
+      {loading ? <p className="text-muted text-sm">{t('app.loading')}</p> : null}
+
+      {!loading && plans.length > 0 ? (
         <section className="flex flex-col gap-2">
-          <h2 className="text-muted text-xs font-semibold tracking-wide uppercase">Plans</h2>
+          <h2 className="text-muted text-xs font-semibold tracking-wide uppercase">
+            {t('app.plans')}
+          </h2>
           <ul className="glass-surface divide-glass-divider divide-y overflow-hidden">
             {plans.map((plan) => (
               <li key={plan.id}>

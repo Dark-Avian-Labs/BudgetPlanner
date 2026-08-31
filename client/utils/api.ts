@@ -1,10 +1,12 @@
 export class ApiError extends Error {
   readonly status: number;
+  readonly fields: string[];
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, fields: string[] = []) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.fields = fields;
   }
 }
 
@@ -78,13 +80,17 @@ export async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await apiFetch(url, init);
   if (!res.ok) {
     let message = res.statusText;
+    let fields: string[] = [];
     try {
-      const data = (await res.json()) as { error?: string };
-      if (data.error) message = data.error;
+      const data = (await res.json()) as { error?: unknown; fields?: unknown };
+      if (typeof data.error === 'string' && data.error) message = data.error;
+      if (Array.isArray(data.fields)) {
+        fields = data.fields.filter((field): field is string => typeof field === 'string');
+      }
     } catch {
       // ignore
     }
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, fields);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

@@ -107,6 +107,7 @@ export function createAppSchema(db: Database.Database): void {
   migrateAccountsColor(db);
   migrateEntriesOnceFrequency(db);
   migrateEntriesArchivedAt(db);
+  migratePendingInviteUniqueness(db);
 }
 
 function migrateAccountsColor(db: Database.Database): void {
@@ -173,6 +174,28 @@ function migrateEntriesArchivedAt(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_entries_archived ON entries(plan_id, archived_at)`);
 }
 
+function migratePendingInviteUniqueness(db: Database.Database): void {
+  const tables = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'plan_invites'`)
+    .get() as { name: string } | undefined;
+  if (!tables) return;
+
+  db.exec(`DROP INDEX IF EXISTS idx_plan_invites_pending_email`);
+  db.exec(`UPDATE plan_invites SET email = lower(email) WHERE email != lower(email)`);
+  db.exec(`
+    DELETE FROM plan_invites
+    WHERE accepted_at IS NULL
+      AND rowid NOT IN (
+        SELECT MAX(rowid)
+        FROM plan_invites
+        WHERE accepted_at IS NULL
+        GROUP BY plan_id, email
+      );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_plan_invites_pending_email
+      ON plan_invites(plan_id, email) WHERE accepted_at IS NULL;
+  `);
+}
+
 function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void {
   const existingCols = db.prepare(`PRAGMA table_info(entries)`).all() as Array<{ name: string }>;
   const hasArchivedAt = existingCols.some((c) => c.name === 'archived_at');
@@ -187,8 +210,9 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
   const archivedSelect = hasArchivedAt ? 'archived_at,' : 'NULL AS archived_at,';
 
   db.pragma('foreign_keys = OFF');
-  const tx = db.transaction(() => {
-    db.exec(`
+  try {
+    const tx = db.transaction(() => {
+      db.exec(`
       CREATE TABLE entries_new (
         id TEXT PRIMARY KEY,
         plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -225,7 +249,9 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
       ALTER TABLE entries_new RENAME TO entries;
       CREATE INDEX IF NOT EXISTS idx_entries_plan ON entries(plan_id, category_id, sort_order);
     `);
-  });
-  tx();
-  db.pragma('foreign_keys = ON');
+    });
+    tx();
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
 }

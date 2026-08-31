@@ -37,7 +37,11 @@ function RouteFallback() {
 export function AppRoutes() {
   const { t } = useTranslation();
   return (
-    <ErrorBoundary fallbackTitle={t('app.crashTitle')} fallbackHint={t('app.crashHint')}>
+    <ErrorBoundary
+      fallbackTitle={t('app.crashTitle')}
+      fallbackHint={t('app.crashHint')}
+      fallbackReloadLabel={t('app.crashReload')}
+    >
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path={APP_PATHS.signIn} element={<SignInPage />} />

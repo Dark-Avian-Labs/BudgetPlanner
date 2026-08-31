@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ALLOWED_CURRENCIES,
   clampPlanYear,
+  invalidFieldsBody,
   isNonNegativeInteger,
   normalizeComment,
   normalizeCurrency,
@@ -83,5 +84,21 @@ describe('validateEntryBody', () => {
   it('validates only provided fields when partial', () => {
     expect(validateEntryBody({ amount_cents: 50 }, true)).toEqual([]);
     expect(validateEntryBody({ amount_cents: -1 }, true)).toEqual(['amount_cents']);
+  });
+
+  it('rejects malformed end_date values', () => {
+    expect(validateEntryBody({ ...valid, end_date: '03/2028' })).toContain('end_date');
+    expect(validateEntryBody({ ...valid, end_date: '2028-13-01' })).toContain('end_date');
+    expect(validateEntryBody({ ...valid, end_date: '2028-03-01' })).toEqual([]);
+    expect(validateEntryBody({ ...valid, end_date: null })).toEqual([]);
+  });
+});
+
+describe('invalidFieldsBody', () => {
+  it('returns a stable error code plus the field list', () => {
+    expect(invalidFieldsBody(['name', 'due_day'])).toEqual({
+      error: 'Invalid fields',
+      fields: ['name', 'due_day'],
+    });
   });
 });

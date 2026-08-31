@@ -12,7 +12,9 @@ import { Input } from '../../components/ui/Input';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Modal } from '../../components/ui/Modal';
 import { isAccountColor, nextAccountColor, type AccountColor } from '../../lib/accountColors';
+import { entryPayloadFieldErrors, type EntryPayload } from '../../lib/entryPayload';
 import { centsToInput, formatMoney, parseAmountToCents } from '../../lib/format';
+import { applyEntryToPlan, removeEntryFromPlan } from '../../lib/planEntriesState';
 import { calendarMonth, clampPlanMonth, isSameMonth, type PlanMonth } from '../../lib/planMonth';
 import {
   canEdit,
@@ -91,6 +93,18 @@ function entryToForm(entry: Entry): EntryFormState {
     end_date: entry.end_date ?? '',
     final_amount: entry.final_amount_cents != null ? centsToInput(entry.final_amount_cents) : '',
   };
+}
+
+function formatEntryFieldsMessage(
+  fields: string[],
+  t: (key: string, options?: { fields?: string }) => string,
+): string {
+  const labels = fields.map((field) => {
+    const key = `entry.fields.${field}`;
+    const label = t(key);
+    return label === key ? field : label;
+  });
+  return t('entry.invalidFields', { fields: labels.join(', ') });
 }
 
 function monthFromSearch(searchParams: URLSearchParams): PlanMonth {
@@ -400,7 +414,7 @@ function PlanPageInner() {
         case 'entry': {
           await apiJson(`/api/plans/${planId}/entries/${pendingDelete.id}`, { method: 'DELETE' });
           setSheet('closed');
-          await load();
+          setData((prev) => (prev ? removeEntryFromPlan(prev, pendingDelete.id) : prev));
           break;
         }
         case 'plan': {
@@ -442,10 +456,19 @@ function PlanPageInner() {
     if (!planId || !data) return;
     const amount = parseAmountToCents(form.amount);
     if (amount == null) {
-      setError('Invalid amount');
+      setError(t('entry.invalidAmount'));
       return;
     }
-    const payload = {
+    let finalAmountCents: number | null = null;
+    if (form.kind === 'credit' && form.final_amount.trim()) {
+      const parsedFinal = parseAmountToCents(form.final_amount);
+      if (parsedFinal == null) {
+        setError(formatEntryFieldsMessage(['final_amount_cents'], t));
+        return;
+      }
+      finalAmountCents = parsedFinal;
+    }
+    const payload: EntryPayload = {
       name: form.name.trim(),
       amount_cents: amount,
       kind: form.kind,
@@ -457,28 +480,40 @@ function PlanPageInner() {
       account_id: form.account_id || null,
       comment: form.comment.trim() || null,
       end_date: form.kind === 'credit' && form.end_date ? form.end_date : null,
-      final_amount_cents:
-        form.kind === 'credit' && form.final_amount ? parseAmountToCents(form.final_amount) : null,
+      final_amount_cents: finalAmountCents,
     };
+    const fieldErrors = entryPayloadFieldErrors(payload);
+    if (fieldErrors.length) {
+      setError(formatEntryFieldsMessage(fieldErrors, t));
+      return;
+    }
 
     setSaving(true);
     setError(null);
     try {
       if (sheet === 'edit' && selected) {
-        await apiJson(`/api/plans/${planId}/entries/${selected.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
+        const result = await apiJson<{ entry: Entry }>(
+          `/api/plans/${planId}/entries/${selected.id}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          },
+        );
+        setData((prev) => (prev ? applyEntryToPlan(prev, result.entry) : prev));
       } else {
-        await apiJson(`/api/plans/${planId}/entries`, {
+        const result = await apiJson<{ entry: Entry }>(`/api/plans/${planId}/entries`, {
           method: 'POST',
           body: JSON.stringify(payload),
         });
+        setData((prev) => (prev ? applyEntryToPlan(prev, result.entry) : prev));
       }
       setSheet('closed');
-      await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      if (err instanceof ApiError && err.fields.length) {
+        setError(formatEntryFieldsMessage(err.fields, t));
+      } else {
+        setError(err instanceof Error ? err.message : t('entry.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }
@@ -1358,14 +1393,6 @@ function PlanPageInner() {
           </>
         ) : null}
       </Modal>
-
-      <button
-        type="button"
-        className="sr-only"
-        onClick={() => navigate('/')}
-        tabIndex={-1}
-        aria-hidden
-      />
     </div>
   );
 }

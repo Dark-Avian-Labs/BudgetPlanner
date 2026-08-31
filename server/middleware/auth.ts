@@ -29,6 +29,15 @@ function emailFromClaims(claims: Record<string, unknown> | null): string | null 
   return claimEmail ? claimEmail.toLowerCase() : null;
 }
 
+function isPlaceholderClerkEmail(email: string): boolean {
+  return email.endsWith('@users.clerk');
+}
+
+function usableEmail(email: string | null): string | null {
+  if (!email || isPlaceholderClerkEmail(email)) return null;
+  return email;
+}
+
 async function emailFromClerkApi(userId: string): Promise<string | null> {
   try {
     const user = await clerkClient.users.getUser(userId);
@@ -46,11 +55,12 @@ async function resolveEmail(
   userId: string,
   claims: Record<string, unknown> | null,
   existingEmail: string | null,
-): Promise<string> {
-  const fromClaims = emailFromClaims(claims);
-  if (fromClaims) return fromClaims;
-  if (existingEmail) return existingEmail;
-  return (await emailFromClerkApi(userId)) ?? `${userId}@users.clerk`;
+): Promise<string | null> {
+  return (
+    usableEmail(emailFromClaims(claims)) ??
+    usableEmail(existingEmail) ??
+    usableEmail(await emailFromClerkApi(userId))
+  );
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -74,6 +84,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       (auth.sessionClaims as Record<string, unknown> | null) ?? null,
       existing?.email ?? null,
     );
+    if (!email) {
+      if (existing && !existing.email.endsWith('@users.clerk')) {
+        req.appUser = existing;
+        next();
+        return;
+      }
+      res.status(503).json({ error: 'Could not resolve account email. Try again shortly.' });
+      return;
+    }
     req.appUser =
       existing && existing.email === email ? existing : upsertUserFromClerk(auth.userId, email);
     next();

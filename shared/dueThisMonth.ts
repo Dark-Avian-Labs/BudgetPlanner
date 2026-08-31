@@ -18,7 +18,7 @@ export interface MonthTotals {
   netCents: number;
 }
 
-function parseIsoDate(iso: string): { year: number; month: number; day: number } | null {
+export function parseIsoDate(iso: string): { year: number; month: number; day: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
   if (!match) return null;
   const year = Number(match[1]);
