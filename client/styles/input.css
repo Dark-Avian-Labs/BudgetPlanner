@@ -680,6 +680,17 @@ html.ui-acrylic:not(.dark) {
     background: var(--color-glass-hover);
   }
 
+  .icon-toggle-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .icon-toggle-btn:disabled:hover {
+    color: var(--color-muted);
+    border-color: var(--color-glass-border);
+    background: var(--color-glass);
+  }
+
   .icon-toggle-btn[aria-pressed='true'] {
     color: var(--color-accent);
     border-color: color-mix(in oklab, var(--color-accent) 45%, var(--color-glass-border));
@@ -1863,6 +1874,29 @@ html.ui-clear .stale-update-banner::after {
 
 .entry-row__comment {
   color: var(--color-muted);
+}
+
+.month-selector {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.month-selector__input {
+  width: auto;
+  min-width: 10.25rem;
+  height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+  text-align: center;
+}
+
+.month-selector__today {
+  min-height: 40px;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .print-sheet {

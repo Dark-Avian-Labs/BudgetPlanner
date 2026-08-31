@@ -40,6 +40,7 @@ export interface Entry {
   comment: string | null;
   end_date: string | null;
   final_amount_cents: number | null;
+  archived_at: string | null;
   sort_order: number;
 }
 
