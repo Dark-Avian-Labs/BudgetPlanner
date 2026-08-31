@@ -26,3 +26,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.3.0** `chore` [#15](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/15): feat/stale client refresh
 - **v1.3.1** `chore(deps)` [#20](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/20): bump the production-dependencies group with 2 updates
 - **v1.3.2** `ci(deps)` [#22](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/22): bump useblacksmith/checkout in the github-actions group
+- **v1.3.3** `ci(deps)` [#24](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/24): bump useblacksmith/checkout in the github-actions group
