@@ -13,6 +13,18 @@ export interface AppUser {
 
 const DEFAULT_CATEGORIES = ['Accounts & Credit', 'Household', 'Entertainment', 'Parents'];
 
+export function getUserByClerkId(
+  clerkUserId: string,
+  db: ReturnType<typeof getAppDb> = getAppDb(),
+): AppUser | null {
+  const row = db
+    .prepare(
+      `SELECT id, clerk_user_id, email, locale, default_plan_id FROM users WHERE clerk_user_id = ?`,
+    )
+    .get(clerkUserId) as AppUser | undefined;
+  return row ?? null;
+}
+
 export function upsertUserFromClerk(
   clerkUserId: string,
   email: string,

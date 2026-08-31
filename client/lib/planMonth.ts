@@ -1,6 +1,7 @@
 export {
   calendarMonth,
   clampPlanMonth,
+  enumerateMonths,
   formatMonthLabel,
   isSameMonth,
   MAX_PLAN_YEAR,

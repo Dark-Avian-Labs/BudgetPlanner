@@ -24,9 +24,6 @@
     "crashHint": "Lade die Seite neu. Wenn es bleibt, melde dich ab und wieder an."
   },
   "plan": {
-    "thisMonth": "Dieser Monat",
-    "previousMonth": "Vorheriger Monat",
-    "nextMonth": "Nächster Monat",
     "pickMonth": "Monat wählen",
     "expenses": "Ausgaben",
     "income": "Einnahmen",
