@@ -49,3 +49,16 @@ export function formatMonthLabel(year: number, month: number, locale: string): s
     new Date(year, month - 1, 1),
   );
 }
+
+export function enumerateMonths(from: PlanMonth, to: PlanMonth): PlanMonth[] {
+  const start = from.year * 12 + from.month;
+  const end = to.year * 12 + to.month;
+  const first = Math.min(start, end);
+  const last = Math.max(start, end);
+  const months: PlanMonth[] = [];
+  for (let key = first; key <= last; key++) {
+    const year = Math.floor((key - 1) / 12);
+    months.push({ year, month: key - year * 12 });
+  }
+  return months;
+}

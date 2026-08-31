@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { calendarMonth, clampPlanMonth, monthKey, parseMonthKey, shiftMonth } from '../../shared/planMonth.js';
+import {
+  calendarMonth,
+  clampPlanMonth,
+  enumerateMonths,
+  monthKey,
+  parseMonthKey,
+  shiftMonth,
+} from '../../shared/planMonth.js';
 
 describe('shiftMonth', () => {
   it('steps into the next year', () => {
@@ -46,5 +53,16 @@ describe('monthKey', () => {
 describe('calendarMonth', () => {
   it('reads year and 1-based month from a Date', () => {
     expect(calendarMonth(new Date(2026, 7, 31))).toEqual({ year: 2026, month: 8 });
+  });
+});
+
+describe('enumerateMonths', () => {
+  it('lists inclusive months wrapping a year boundary', () => {
+    expect(enumerateMonths({ year: 2026, month: 11 }, { year: 2027, month: 2 })).toEqual([
+      { year: 2026, month: 11 },
+      { year: 2026, month: 12 },
+      { year: 2027, month: 1 },
+      { year: 2027, month: 2 },
+    ]);
   });
 });

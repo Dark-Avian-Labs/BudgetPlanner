@@ -3,7 +3,13 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { CLERK_CONFIGURED } from '../config.js';
 import type { MemberRole } from '../db/appSchema.js';
-import { canEdit, getMembership, upsertUserFromClerk, type AppUser } from '../services/users.js';
+import {
+  canEdit,
+  getMembership,
+  getUserByClerkId,
+  upsertUserFromClerk,
+  type AppUser,
+} from '../services/users.js';
 
 export type AuthedRequest = Request & { appUser: AppUser };
 
@@ -15,16 +21,15 @@ declare global {
   }
 }
 
-async function resolveEmail(
-  userId: string,
-  claims: Record<string, unknown> | null,
-): Promise<string> {
+function emailFromClaims(claims: Record<string, unknown> | null): string | null {
   const claimEmail =
     (typeof claims?.email === 'string' && claims.email) ||
     (typeof claims?.primary_email === 'string' && claims.primary_email) ||
     null;
-  if (claimEmail) return claimEmail.toLowerCase();
+  return claimEmail ? claimEmail.toLowerCase() : null;
+}
 
+async function emailFromClerkApi(userId: string): Promise<string | null> {
   try {
     const user = await clerkClient.users.getUser(userId);
     const primary =
@@ -34,8 +39,18 @@ async function resolveEmail(
   } catch (err) {
     console.warn('[auth] Could not load Clerk user email', err);
   }
+  return null;
+}
 
-  return `${userId}@users.clerk`;
+async function resolveEmail(
+  userId: string,
+  claims: Record<string, unknown> | null,
+  existingEmail: string | null,
+): Promise<string> {
+  const fromClaims = emailFromClaims(claims);
+  if (fromClaims) return fromClaims;
+  if (existingEmail) return existingEmail;
+  return (await emailFromClerkApi(userId)) ?? `${userId}@users.clerk`;
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -53,11 +68,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   try {
+    const existing = getUserByClerkId(auth.userId);
     const email = await resolveEmail(
       auth.userId,
       (auth.sessionClaims as Record<string, unknown> | null) ?? null,
+      existing?.email ?? null,
     );
-    req.appUser = upsertUserFromClerk(auth.userId, email);
+    req.appUser =
+      existing && existing.email === email ? existing : upsertUserFromClerk(auth.userId, email);
     next();
   } catch (err) {
     console.error('[auth] Failed to sync user', err);

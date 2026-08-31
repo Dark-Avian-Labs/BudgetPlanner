@@ -24,9 +24,6 @@
     "crashHint": "Reload the page. If this keeps happening, sign out and back in."
   },
   "plan": {
-    "thisMonth": "This month",
-    "previousMonth": "Previous month",
-    "nextMonth": "Next month",
     "pickMonth": "Choose month",
     "expenses": "Expenses",
     "income": "Income",

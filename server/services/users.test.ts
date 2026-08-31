@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createAppSchema } from '../db/appSchema.js';
-import { upsertUserFromClerk } from './users.js';
+import { getUserByClerkId, upsertUserFromClerk } from './users.js';
 
 describe('upsertUserFromClerk', () => {
   let db: Database.Database;
@@ -27,5 +27,13 @@ describe('upsertUserFromClerk', () => {
     expect(rows).toHaveLength(1);
     expect(second.id).toBe(first.id);
     expect(second.email).toBe('two@example.com');
+  });
+
+  it('finds an existing user by clerk id', () => {
+    const created = upsertUserFromClerk('clerk_1', 'one@example.com', db);
+    const found = getUserByClerkId('clerk_1', db);
+    expect(found?.id).toBe(created.id);
+    expect(found?.email).toBe('one@example.com');
+    expect(getUserByClerkId('missing', db)).toBeNull();
   });
 });
