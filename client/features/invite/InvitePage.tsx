@@ -91,9 +91,7 @@ function InviteInner() {
             {t('invite.accept')}
           </Button>
         </>
-      ) : (
-        <p className="text-muted text-sm">{t('auth.signInSubtitle')}</p>
-      )}
+      ) : null}
     </div>
   );
 }

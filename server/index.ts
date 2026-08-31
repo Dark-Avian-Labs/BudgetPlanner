@@ -56,6 +56,20 @@ app.use(express.json({ limit: '64kb' }));
 app.use(express.urlencoded({ extended: true, limit: '64kb' }));
 app.use(cookieParser());
 
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok', app: APP_NAME });
+});
+
+app.get('/readyz', (_req, res) => {
+  try {
+    sessionDb.prepare('SELECT 1').get();
+    appDb.prepare('SELECT 1').get();
+    res.json({ status: 'ready', app: APP_NAME });
+  } catch {
+    res.status(503).json({ status: 'not_ready', app: APP_NAME });
+  }
+});
+
 if (CLERK_CONFIGURED) {
   app.use(clerkMiddleware());
   console.log(`[${APP_NAME}] Clerk auth enabled`);
@@ -120,11 +134,7 @@ const { csrfSynchronisedProtection, generateToken } = csrfSync({
 });
 
 app.use(csrfSynchronisedProtection);
-
-app.use((req, res, next) => {
-  (res.locals as { csrfToken?: string }).csrfToken = generateToken(req);
-  next();
-});
+app.locals.generateCsrfToken = generateToken;
 
 const appApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -145,20 +155,6 @@ const staticAssetLimiter = rateLimit({
   max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
-});
-
-app.get('/healthz', (_req, res) => {
-  res.json({ status: 'ok', app: APP_NAME });
-});
-
-app.get('/readyz', (_req, res) => {
-  try {
-    sessionDb.prepare('SELECT 1').get();
-    appDb.prepare('SELECT 1').get();
-    res.json({ status: 'ready', app: APP_NAME });
-  } catch {
-    res.status(503).json({ status: 'not_ready', app: APP_NAME });
-  }
 });
 
 app.get('/api/version', (_req, res) => {
@@ -284,6 +280,13 @@ function shutdown(baseExitCode = 0): void {
     }
     closeAndExit(baseExitCode);
   });
+  server.closeIdleConnections();
+  setTimeout(
+    () => {
+      server.closeAllConnections();
+    },
+    Math.max(0, SHUTDOWN_TIMEOUT_MS - 500),
+  );
 }
 
 process.on('SIGINT', () => shutdown(0));

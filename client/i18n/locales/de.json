@@ -20,6 +20,7 @@
     "copyFailed": "Kopieren fehlgeschlagen. Markiere den Link und kopiere ihn manuell.",
     "setDefault": "Als Standardplan festlegen",
     "retry": "Erneut versuchen",
+    "plans": "Pläne",
     "crashTitle": "Etwas ist schiefgelaufen",
     "crashHint": "Lade die Seite neu. Wenn es bleibt, melde dich ab und wieder an."
   },

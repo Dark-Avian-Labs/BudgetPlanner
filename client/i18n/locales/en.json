@@ -20,6 +20,7 @@
     "copyFailed": "Could not copy. Select the link and copy it manually.",
     "setDefault": "Set as default plan",
     "retry": "Try again",
+    "plans": "Plans",
     "crashTitle": "Something went wrong",
     "crashHint": "Reload the page. If this keeps happening, sign out and back in."
   },

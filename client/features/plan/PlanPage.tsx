@@ -1358,14 +1358,6 @@ function PlanPageInner() {
           </>
         ) : null}
       </Modal>
-
-      <button
-        type="button"
-        className="sr-only"
-        onClick={() => navigate('/')}
-        tabIndex={-1}
-        aria-hidden
-      />
     </div>
   );
 }

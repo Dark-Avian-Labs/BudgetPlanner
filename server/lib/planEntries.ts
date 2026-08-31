@@ -1,10 +1,29 @@
 import type Database from 'better-sqlite3';
 
-import type { EntryFrequency } from '../db/appSchema.js';
+import type { EntryFrequency, EntryKind } from '../db/appSchema.js';
 import { isOnceEntryExpired } from './dueThisMonth.js';
 
 export const ENTRY_SELECT = `id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
               due_day, due_month, due_year, comment, end_date, final_amount_cents, archived_at, sort_order`;
+
+export type PlanEntryRow = {
+  id: string;
+  plan_id: string;
+  category_id: string;
+  account_id: string | null;
+  name: string;
+  amount_cents: number;
+  kind: EntryKind;
+  frequency: EntryFrequency;
+  due_day: number;
+  due_month: number | null;
+  due_year: number | null;
+  comment: string | null;
+  end_date: string | null;
+  final_amount_cents: number | null;
+  archived_at: string | null;
+  sort_order: number;
+};
 
 export function syncOnceArchiveState(
   db: Database.Database,
@@ -47,11 +66,11 @@ export function listPlanEntries(
   year: number,
   month: number,
   includeAllArchived = false,
-): unknown[] {
+): PlanEntryRow[] {
   if (includeAllArchived) {
     return db
       .prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE plan_id = ? ORDER BY sort_order, name`)
-      .all(planId);
+      .all(planId) as PlanEntryRow[];
   }
 
   return db
@@ -64,5 +83,5 @@ export function listPlanEntries(
          )
        ORDER BY sort_order, name`,
     )
-    .all(planId, year, month);
+    .all(planId, year, month) as PlanEntryRow[];
 }

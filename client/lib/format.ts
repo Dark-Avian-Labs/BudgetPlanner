@@ -41,9 +41,12 @@ export function formatDueMonthDay(month: number, day: number, locale: string): s
 export function parseAmountToCents(raw: string): number | null {
   const normalized = raw.trim().replace(/\s/g, '').replace(',', '.');
   if (!normalized) return null;
-  const value = Number(normalized);
-  if (!Number.isFinite(value) || value < 0) return null;
-  return Math.round(value * 100);
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  const [whole, fraction = ''] = normalized.split('.');
+  const euros = Number(whole);
+  if (!Number.isSafeInteger(euros) || euros < 0) return null;
+  const cents = Number((fraction + '00').slice(0, 2));
+  return euros * 100 + cents;
 }
 
 export function centsToInput(amountCents: number): string {

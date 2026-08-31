@@ -46,11 +46,13 @@ async function resolveEmail(
   userId: string,
   claims: Record<string, unknown> | null,
   existingEmail: string | null,
-): Promise<string> {
+): Promise<string | null> {
   const fromClaims = emailFromClaims(claims);
   if (fromClaims) return fromClaims;
-  if (existingEmail) return existingEmail;
-  return (await emailFromClerkApi(userId)) ?? `${userId}@users.clerk`;
+  const usableExisting =
+    existingEmail && !existingEmail.endsWith('@users.clerk') ? existingEmail : null;
+  if (usableExisting) return usableExisting;
+  return emailFromClerkApi(userId);
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -74,6 +76,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       (auth.sessionClaims as Record<string, unknown> | null) ?? null,
       existing?.email ?? null,
     );
+    if (!email) {
+      if (existing && !existing.email.endsWith('@users.clerk')) {
+        req.appUser = existing;
+        next();
+        return;
+      }
+      res.status(503).json({ error: 'Could not resolve account email. Try again shortly.' });
+      return;
+    }
     req.appUser =
       existing && existing.email === email ? existing : upsertUserFromClerk(auth.userId, email);
     next();

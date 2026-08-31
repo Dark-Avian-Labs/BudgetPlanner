@@ -187,8 +187,9 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
   const archivedSelect = hasArchivedAt ? 'archived_at,' : 'NULL AS archived_at,';
 
   db.pragma('foreign_keys = OFF');
-  const tx = db.transaction(() => {
-    db.exec(`
+  try {
+    const tx = db.transaction(() => {
+      db.exec(`
       CREATE TABLE entries_new (
         id TEXT PRIMARY KEY,
         plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -225,7 +226,9 @@ function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void 
       ALTER TABLE entries_new RENAME TO entries;
       CREATE INDEX IF NOT EXISTS idx_entries_plan ON entries(plan_id, category_id, sort_order);
     `);
-  });
-  tx();
-  db.pragma('foreign_keys = ON');
+    });
+    tx();
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
 }

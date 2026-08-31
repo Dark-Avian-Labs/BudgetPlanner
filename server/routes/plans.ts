@@ -6,7 +6,12 @@ import type { EntryFrequency, EntryKind, MemberRole } from '../db/appSchema.js';
 import { getAppDb } from '../db/connection.js';
 import { isAccountColor, nextAccountColor } from '../lib/accountColors.js';
 import { computeMonthTotals } from '../lib/dueThisMonth.js';
-import { ENTRY_SELECT, listPlanEntries, syncOnceArchiveState } from '../lib/planEntries.js';
+import {
+  ENTRY_SELECT,
+  listPlanEntries,
+  syncOnceArchiveState,
+  type PlanEntryRow,
+} from '../lib/planEntries.js';
 import { calendarMonth, clampPlanMonth } from '../lib/planMonth.js';
 import {
   isNonNegativeInteger,
@@ -48,25 +53,6 @@ interface AccountRow {
   plan_id: string;
   name: string;
   color: string;
-  sort_order: number;
-}
-
-interface EntryRow {
-  id: string;
-  plan_id: string;
-  category_id: string;
-  account_id: string | null;
-  name: string;
-  amount_cents: number;
-  kind: EntryKind;
-  frequency: EntryFrequency;
-  due_day: number;
-  due_month: number | null;
-  due_year: number | null;
-  comment: string | null;
-  end_date: string | null;
-  final_amount_cents: number | null;
-  archived_at: string | null;
   sort_order: number;
 }
 
@@ -231,7 +217,7 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
     )
     .all(planId) as AccountRow[];
 
-  const entries = listPlanEntries(db, planId, year, month, includeArchived) as EntryRow[];
+  const entries = listPlanEntries(db, planId, year, month, includeArchived);
   const totals = computeMonthTotals(entries, year, month);
   const role = (res.locals as { planRole?: MemberRole }).planRole!;
   const members = listMembers(db, planId);
@@ -613,7 +599,7 @@ plansRouter.patch(
     const db = getAppDb();
     const existing = db
       .prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ? AND plan_id = ?`)
-      .get(entryId, planId) as EntryRow | undefined;
+      .get(entryId, planId) as PlanEntryRow | undefined;
     if (!existing) {
       res.status(404).json({ error: 'Entry not found' });
       return;
@@ -805,6 +791,18 @@ plansRouter.post('/:planId/invites', requirePlanAccess('owner'), (req: Request, 
     return;
   }
 
+  const existingMember = getAppDb()
+    .prepare(
+      `SELECT pm.role FROM plan_members pm
+       JOIN users u ON u.id = pm.user_id
+       WHERE pm.plan_id = ? AND lower(u.email) = ?`,
+    )
+    .get(planId, email) as { role: string } | undefined;
+  if (existingMember) {
+    res.status(409).json({ error: 'That email already belongs to a plan member' });
+    return;
+  }
+
   const token = createInviteToken();
   const id = randomUUID();
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -961,10 +959,18 @@ invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) 
   const setDefault = Boolean(req.body?.setAsDefault);
 
   const tx = db.transaction(() => {
+    const existing = db
+      .prepare(`SELECT role FROM plan_members WHERE plan_id = ? AND user_id = ?`)
+      .get(invite.plan_id, user.id) as { role: string } | undefined;
+    if (existing?.role === 'owner') {
+      throw new Error('OWNER_INVITE');
+    }
+
     db.prepare(
       `INSERT INTO plan_members (plan_id, user_id, role)
        VALUES (?, ?, ?)
-       ON CONFLICT(plan_id, user_id) DO UPDATE SET role = excluded.role`,
+       ON CONFLICT(plan_id, user_id) DO UPDATE SET role = excluded.role
+       WHERE plan_members.role != 'owner'`,
     ).run(invite.plan_id, user.id, invite.role);
 
     db.prepare(`UPDATE plan_invites SET accepted_at = datetime('now') WHERE id = ?`).run(invite.id);
@@ -975,7 +981,17 @@ invitesRouter.post('/:token/accept', requireAuth, (req: Request, res: Response) 
       ).run(invite.plan_id, user.id);
     }
   });
-  tx();
+  try {
+    tx();
+  } catch (err) {
+    if (err instanceof Error && err.message === 'OWNER_INVITE') {
+      res
+        .status(409)
+        .json({ error: 'Plan owners cannot accept an invite that would change their role' });
+      return;
+    }
+    throw err;
+  }
 
   res.json({
     planId: invite.plan_id,

@@ -1,3 +1,4 @@
+import { parseIsoDate } from '../../shared/dueThisMonth.js';
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from '../../shared/planMonth.js';
 
 export const ALLOWED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK'] as const;
@@ -107,6 +108,11 @@ export function validateEntryBody(body: Record<string, unknown>, partial = false
       errors.push('comment');
     } else if (typeof body.comment !== 'string') {
       errors.push('comment');
+    }
+  }
+  if (body.end_date !== undefined && body.end_date !== null && body.end_date !== '') {
+    if (typeof body.end_date !== 'string' || parseIsoDate(body.end_date) == null) {
+      errors.push('end_date');
     }
   }
   return errors;
