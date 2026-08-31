@@ -29,3 +29,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.3.3** `ci(deps)` [#24](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/24): bump useblacksmith/checkout in the github-actions group
 - **v1.3.4** `chore` [#27](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/27): chore/deps material symbols and tsx
 - **v1.4.0** `chore` [#28](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/28): feat/plan month selector
+- **v1.5.0** `chore` [#29](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/29): feat/plan month picker and auth
