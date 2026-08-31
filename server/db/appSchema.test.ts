@@ -112,4 +112,55 @@ describe('createAppSchema', () => {
     }).toThrow();
     db.close();
   });
+
+  it('lowercases mixed-case pending invites before uniqueness', () => {
+    const db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        clerk_user_id TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL,
+        locale TEXT NOT NULL DEFAULT 'en',
+        default_plan_id TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'EUR',
+        owner_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE plan_invites (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+        email TEXT NOT NULL,
+        role TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        invited_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TEXT NOT NULL,
+        accepted_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO users (id, clerk_user_id, email) VALUES ('u1', 'c1', 'a@b.c');
+      INSERT INTO plans (id, name, owner_user_id) VALUES ('p1', 'Home', 'u1');
+      INSERT INTO plan_invites (id, plan_id, email, role, token, invited_by, expires_at)
+        VALUES ('i1', 'p1', 'X@Y.Z', 'viewer', 'tok1', 'u1', '2099-01-01');
+      INSERT INTO plan_invites (id, plan_id, email, role, token, invited_by, expires_at)
+        VALUES ('i2', 'p1', 'x@y.z', 'editor', 'tok2', 'u1', '2099-01-01');
+    `);
+
+    createAppSchema(db);
+
+    const pending = db.prepare(`SELECT id, email FROM plan_invites WHERE accepted_at IS NULL`).all() as Array<{
+      id: string;
+      email: string;
+    }>;
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.id).toBe('i2');
+    expect(pending[0]?.email).toBe('x@y.z');
+    db.close();
+  });
 });

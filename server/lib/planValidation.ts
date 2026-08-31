@@ -1,11 +1,11 @@
 import { parseIsoDate } from '../../shared/dueThisMonth.js';
+import { MAX_COMMENT_LENGTH, MAX_NAME_LENGTH } from '../../shared/entryLimits.js';
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from '../../shared/planMonth.js';
 
 export const ALLOWED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK'] as const;
 export type AllowedCurrency = (typeof ALLOWED_CURRENCIES)[number];
 
-export const MAX_NAME_LENGTH = 120;
-export const MAX_COMMENT_LENGTH = 2000;
+export { MAX_COMMENT_LENGTH, MAX_NAME_LENGTH };
 export const MIN_YEAR = MIN_PLAN_YEAR;
 export const MAX_YEAR = MAX_PLAN_YEAR;
 

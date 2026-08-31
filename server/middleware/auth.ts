@@ -29,6 +29,15 @@ function emailFromClaims(claims: Record<string, unknown> | null): string | null 
   return claimEmail ? claimEmail.toLowerCase() : null;
 }
 
+function isPlaceholderClerkEmail(email: string): boolean {
+  return email.endsWith('@users.clerk');
+}
+
+function usableEmail(email: string | null): string | null {
+  if (!email || isPlaceholderClerkEmail(email)) return null;
+  return email;
+}
+
 async function emailFromClerkApi(userId: string): Promise<string | null> {
   try {
     const user = await clerkClient.users.getUser(userId);
@@ -47,12 +56,11 @@ async function resolveEmail(
   claims: Record<string, unknown> | null,
   existingEmail: string | null,
 ): Promise<string | null> {
-  const fromClaims = emailFromClaims(claims);
-  if (fromClaims) return fromClaims;
-  const usableExisting =
-    existingEmail && !existingEmail.endsWith('@users.clerk') ? existingEmail : null;
-  if (usableExisting) return usableExisting;
-  return emailFromClerkApi(userId);
+  return (
+    usableEmail(emailFromClaims(claims)) ??
+    usableEmail(existingEmail) ??
+    usableEmail(await emailFromClerkApi(userId))
+  );
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {

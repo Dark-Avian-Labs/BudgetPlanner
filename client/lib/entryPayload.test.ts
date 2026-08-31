@@ -38,6 +38,17 @@ describe('entryPayloadFieldErrors', () => {
     ).toEqual(['due_month', 'due_year']);
   });
 
+  it('rejects a one-time due_year outside 2000–2100', () => {
+    expect(
+      entryPayloadFieldErrors({
+        ...valid,
+        frequency: 'once',
+        due_month: 8,
+        due_year: 1999,
+      }),
+    ).toEqual(['due_year']);
+  });
+
   it('rejects a malformed end_date', () => {
     expect(entryPayloadFieldErrors({ ...valid, end_date: '03/2028' })).toEqual(['end_date']);
   });

@@ -45,7 +45,6 @@ function shutdown(code = 0) {
     for (const child of alive) {
       tryKill(child, 'SIGKILL');
     }
-    process.exit(code);
   }, SHUTDOWN_DEADLINE_MS);
 
   for (const child of alive) {

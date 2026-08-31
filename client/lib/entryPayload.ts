@@ -1,7 +1,6 @@
+import { MAX_COMMENT_LENGTH, MAX_NAME_LENGTH } from '../../shared/entryLimits';
 import { parseIsoDate } from './dueThisMonth';
-
-const MAX_NAME_LENGTH = 120;
-const MAX_COMMENT_LENGTH = 2000;
+import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from './planMonth';
 
 export type EntryPayload = {
   name: string;
@@ -43,7 +42,12 @@ export function entryPayloadFieldErrors(payload: EntryPayload): string[] {
     }
   }
   if (payload.frequency === 'once') {
-    if (payload.due_year == null || !Number.isInteger(payload.due_year)) {
+    if (
+      payload.due_year == null ||
+      !Number.isInteger(payload.due_year) ||
+      payload.due_year < MIN_PLAN_YEAR ||
+      payload.due_year > MAX_PLAN_YEAR
+    ) {
       fields.push('due_year');
     }
   }

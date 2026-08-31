@@ -115,14 +115,12 @@ describe('syncOnceArchiveState', () => {
       due_month: null,
       due_year: null,
     });
-    const before = db.prepare(`SELECT updated_at FROM entries WHERE id = 'rent'`).get() as {
-      updated_at: string;
-    };
+    db.prepare(`UPDATE entries SET updated_at = '2000-01-01 00:00:00' WHERE id = 'rent'`).run();
     syncOnceArchiveState(db, 'p1', 2026, 8);
     const after = db.prepare(`SELECT updated_at FROM entries WHERE id = 'rent'`).get() as {
       updated_at: string;
     };
-    expect(after.updated_at).toBe(before.updated_at);
+    expect(after.updated_at).toBe('2000-01-01 00:00:00');
   });
 });
 

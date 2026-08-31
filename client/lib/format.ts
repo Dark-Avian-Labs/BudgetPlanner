@@ -46,7 +46,8 @@ export function parseAmountToCents(raw: string): number | null {
   const euros = Number(whole);
   if (!Number.isSafeInteger(euros) || euros < 0) return null;
   const cents = Number((fraction + '00').slice(0, 2));
-  return euros * 100 + cents;
+  const total = euros * 100 + cents;
+  return Number.isSafeInteger(total) ? total : null;
 }
 
 export function centsToInput(amountCents: number): string {

@@ -811,7 +811,7 @@ plansRouter.post('/:planId/invites', requirePlanAccess('owner'), (req: Request, 
   const pending = db
     .prepare(
       `SELECT id FROM plan_invites
-       WHERE plan_id = ? AND email = ? AND accepted_at IS NULL`,
+       WHERE plan_id = ? AND lower(email) = ? AND accepted_at IS NULL`,
     )
     .get(planId, email) as { id: string } | undefined;
 

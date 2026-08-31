@@ -180,6 +180,8 @@ function migratePendingInviteUniqueness(db: Database.Database): void {
     .get() as { name: string } | undefined;
   if (!tables) return;
 
+  db.exec(`DROP INDEX IF EXISTS idx_plan_invites_pending_email`);
+  db.exec(`UPDATE plan_invites SET email = lower(email) WHERE email != lower(email)`);
   db.exec(`
     DELETE FROM plan_invites
     WHERE accepted_at IS NULL
