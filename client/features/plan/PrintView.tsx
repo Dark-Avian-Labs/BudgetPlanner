@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { amountForMonth, isDueInMonth } from '../../lib/dueThisMonth';
 import { formatDueDay, formatDueMonthDay, formatMoney } from '../../lib/format';
+import { formatMonthLabel } from '../../lib/planMonth';
 import type { Account, Category, Entry } from '../../lib/types';
 
 export function PrintView({
@@ -26,11 +27,7 @@ export function PrintView({
 }) {
   const { t } = useTranslation();
   const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a.name])), [accounts]);
-
-  const monthLabel = new Intl.DateTimeFormat(locale, {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(year, month - 1, 1));
+  const monthLabel = formatMonthLabel(year, month, locale);
 
   const sections = useMemo(() => {
     return [...categories]
@@ -52,7 +49,7 @@ export function PrintView({
   return (
     <div className="print-sheet">
       <div className="print-sheet__toolbar no-print">
-        <p className="text-muted text-sm">{t('plan.printHint')}</p>
+        <p className="text-muted text-sm">{t('plan.printHint', { month: monthLabel })}</p>
         <button type="button" className="btn btn-accent" onClick={() => window.print()}>
           {t('plan.print')}
         </button>
@@ -61,13 +58,11 @@ export function PrintView({
       <article className="print-sheet__page">
         <header className="print-sheet__header">
           <h1>{planName}</h1>
-          <p>
-            {t('plan.thisMonth')}: {monthLabel}
-          </p>
+          <p>{monthLabel}</p>
         </header>
 
         {sections.length === 0 ? (
-          <p>{t('plan.printEmpty')}</p>
+          <p>{t('plan.printEmpty', { month: monthLabel })}</p>
         ) : (
           <table className="print-sheet__table">
             <colgroup>

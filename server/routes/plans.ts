@@ -5,9 +5,10 @@ import { Router, type Request, type Response } from 'express';
 import type { EntryFrequency, EntryKind, MemberRole } from '../db/appSchema.js';
 import { getAppDb } from '../db/connection.js';
 import { isAccountColor, nextAccountColor } from '../lib/accountColors.js';
-import { computeMonthTotals, isOnceEntryExpired } from '../lib/dueThisMonth.js';
+import { computeMonthTotals } from '../lib/dueThisMonth.js';
+import { ENTRY_SELECT, listPlanEntries, syncOnceArchiveState } from '../lib/planEntries.js';
+import { calendarMonth, clampPlanMonth } from '../lib/planMonth.js';
 import {
-  clampPlanYear,
   isNonNegativeInteger,
   normalizeComment,
   normalizeCurrency,
@@ -82,47 +83,24 @@ interface InviteRow {
   expires_at: string;
 }
 
-const ENTRY_SELECT = `id, plan_id, category_id, account_id, name, amount_cents, kind, frequency,
-              due_day, due_month, due_year, comment, end_date, final_amount_cents, archived_at, sort_order`;
-
 function routeParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
 
 function parseMonthQuery(req: Request): { year: number; month: number } {
-  const now = new Date();
-  const fallbackYear = now.getFullYear();
+  const fallback = calendarMonth();
   const rawYear = Number(req.query.year);
-  const year = clampPlanYear(Number.isFinite(rawYear) ? rawYear : fallbackYear, fallbackYear);
-  const month = Number(req.query.month) || now.getMonth() + 1;
-  return { year, month: Math.min(12, Math.max(1, month)) };
+  const rawMonth = Number(req.query.month);
+  return clampPlanMonth(
+    Number.isInteger(rawYear) ? rawYear : fallback.year,
+    Number.isInteger(rawMonth) ? rawMonth : fallback.month,
+    fallback,
+  );
 }
 
-function archiveExpiredOnceEntries(db: ReturnType<typeof getAppDb>, planId: string): void {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const rows = db
-    .prepare(
-      `SELECT id, frequency, due_month, due_year FROM entries
-       WHERE plan_id = ? AND frequency = 'once' AND archived_at IS NULL`,
-    )
-    .all(planId) as Array<{
-    id: string;
-    frequency: EntryFrequency;
-    due_month: number | null;
-    due_year: number | null;
-  }>;
-
-  const archive = db.prepare(
-    `UPDATE entries SET archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
-  );
-  const tx = db.transaction(() => {
-    for (const row of rows) {
-      if (isOnceEntryExpired(row, year, month)) archive.run(row.id);
-    }
-  });
-  tx();
+function syncPlanOnceEntries(db: ReturnType<typeof getAppDb>, planId: string): void {
+  const now = calendarMonth();
+  syncOnceArchiveState(db, planId, now.year, now.month);
 }
 
 function categoryBelongsToPlan(
@@ -239,6 +217,8 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
   }
 
   const includeArchived = req.query.includeArchived === '1';
+  const { year, month } = parseMonthQuery(req);
+  syncPlanOnceEntries(db, planId);
   const categories = db
     .prepare(
       `SELECT id, plan_id, name, sort_order FROM categories WHERE plan_id = ? ORDER BY sort_order, name`,
@@ -251,15 +231,7 @@ plansRouter.get('/:planId', requirePlanAccess('viewer'), (req: Request, res: Res
     )
     .all(planId) as AccountRow[];
 
-  const entries = db
-    .prepare(
-      includeArchived
-        ? `SELECT ${ENTRY_SELECT} FROM entries WHERE plan_id = ? ORDER BY sort_order, name`
-        : `SELECT ${ENTRY_SELECT} FROM entries WHERE plan_id = ? AND archived_at IS NULL ORDER BY sort_order, name`,
-    )
-    .all(planId) as EntryRow[];
-
-  const { year, month } = parseMonthQuery(req);
+  const entries = listPlanEntries(db, planId, year, month, includeArchived) as EntryRow[];
   const totals = computeMonthTotals(entries, year, month);
   const role = (res.locals as { planRole?: MemberRole }).planRole!;
   const members = listMembers(db, planId);
@@ -580,7 +552,6 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
   }
 
   const db = getAppDb();
-  archiveExpiredOnceEntries(db, planId);
   if (!categoryBelongsToPlan(db, body.category_id as string, planId)) {
     res.status(400).json({ error: 'Invalid category' });
     return;
@@ -628,6 +599,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
     max.m + 1,
   );
 
+  syncPlanOnceEntries(db, planId);
   const entry = db.prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ?`).get(id);
   res.status(201).json({ entry });
 });
@@ -639,7 +611,6 @@ plansRouter.patch(
     const planId = routeParam(req.params.planId);
     const entryId = routeParam(req.params.entryId);
     const db = getAppDb();
-    archiveExpiredOnceEntries(db, planId);
     const existing = db
       .prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ? AND plan_id = ?`)
       .get(entryId, planId) as EntryRow | undefined;
@@ -749,6 +720,7 @@ plansRouter.patch(
       entryId,
     );
 
+    syncPlanOnceEntries(db, planId);
     const entry = db.prepare(`SELECT ${ENTRY_SELECT} FROM entries WHERE id = ?`).get(entryId);
     res.json({ entry });
   },
@@ -776,7 +748,7 @@ plansRouter.post('/:planId/reorder', requirePlanAccess('editor'), (req: Request,
   const categories = Array.isArray(req.body?.categories) ? req.body.categories : null;
   const entries = Array.isArray(req.body?.entries) ? req.body.entries : null;
   const db = getAppDb();
-  archiveExpiredOnceEntries(db, planId);
+  syncPlanOnceEntries(db, planId);
 
   try {
     const tx = db.transaction(() => {

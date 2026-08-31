@@ -14,9 +14,9 @@ Default listen port in code is **3001**. `.env.example` and the Vite proxy defau
 
 Money is stored as **integer cents**. Category and account IDs on writes must belong to the same plan (`server/lib/planValidation.ts`). `shared/dueThisMonth.ts` is the source of truth for this-month math; do not fork the rules in only the client or only the server wrapper.
 
-Cadence includes monthly, quarterly, half-yearly, yearly, and `once`. Expired `once` entries are auto-archived on plan load. Credits can use `final_amount_cents` for the last installment.
+Cadence includes monthly, quarterly, half-yearly, yearly, and `once`. Expired `once` entries are auto-archived on plan load and on entry writes. The plan UI can view other months (next month for print, past months for archived one-time items). Viewing a month includes archived `once` entries that were due then. Credits can use `final_amount_cents` for the last installment.
 
-Roles are owner / editor / viewer. Invites are editor or viewer only; viewers cannot mutate. Invite accept requires the signed-in Clerk user's email to match the invite row (case-insensitive); mismatch is 403. The owner cannot leave: they delete the plan instead. Archived entries are soft-deleted (`archived_at`); this-month math and listings skip them.
+Roles are owner / editor / viewer. Invites are editor or viewer only; viewers cannot mutate. Invite accept requires the signed-in Clerk user's email to match the invite row (case-insensitive); mismatch is 403. The owner cannot leave: they delete the plan instead. Archived entries are soft-deleted (`archived_at`). The live current-month list skips them.
 
 ## Databases
 

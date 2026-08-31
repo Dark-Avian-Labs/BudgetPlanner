@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { amountForMonth, isDueInMonth } from '../../lib/dueThisMonth';
 import { formatMoney } from '../../lib/format';
+import { formatMonthLabel } from '../../lib/planMonth';
 import type { Account, Entry } from '../../lib/types';
 
 interface AccountBreakdown {
@@ -72,7 +73,11 @@ export function AccountBreakdownView({
   }, [accounts, entries, locale, month, t, year]);
 
   if (rows.every((r) => r.incomeCents === 0 && r.expenseCents === 0)) {
-    return <p className="text-muted py-8 text-center text-sm">{t('plan.breakdownEmpty')}</p>;
+    return (
+      <p className="text-muted py-8 text-center text-sm">
+        {t('plan.breakdownEmpty', { month: formatMonthLabel(year, month, locale) })}
+      </p>
+    );
   }
 
   return (

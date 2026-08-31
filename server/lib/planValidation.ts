@@ -1,10 +1,12 @@
+import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from '../../shared/planMonth.js';
+
 export const ALLOWED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK'] as const;
 export type AllowedCurrency = (typeof ALLOWED_CURRENCIES)[number];
 
 export const MAX_NAME_LENGTH = 120;
 export const MAX_COMMENT_LENGTH = 2000;
-export const MIN_YEAR = 2000;
-export const MAX_YEAR = 2100;
+export const MIN_YEAR = MIN_PLAN_YEAR;
+export const MAX_YEAR = MAX_PLAN_YEAR;
 
 const ALLOWED_CURRENCY_SET = new Set<string>(ALLOWED_CURRENCIES);
 

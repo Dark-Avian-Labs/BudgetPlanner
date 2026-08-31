@@ -1,7 +1,7 @@
 import { useAuth } from '@clerk/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { AccountColorPicker } from '../../components/budget/AccountColorPicker';
 import { FrequencyBadge } from '../../components/budget/FrequencyBadge';
@@ -13,6 +13,7 @@ import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Modal } from '../../components/ui/Modal';
 import { isAccountColor, nextAccountColor, type AccountColor } from '../../lib/accountColors';
 import { centsToInput, formatMoney, parseAmountToCents } from '../../lib/format';
+import { calendarMonth, clampPlanMonth, isSameMonth, type PlanMonth } from '../../lib/planMonth';
 import {
   canEdit,
   type Account,
@@ -25,6 +26,7 @@ import {
 import { ApiError, apiJson } from '../../utils/api';
 import { copyTextToClipboard } from '../../utils/clipboard';
 import { AccountBreakdownView } from './AccountBreakdownView';
+import { MonthSelector } from './MonthSelector';
 import { PlanListView } from './PlanListView';
 import { PrintView } from './PrintView';
 
@@ -56,16 +58,15 @@ interface EntryFormState {
   final_amount: string;
 }
 
-function emptyForm(categoryId: string): EntryFormState {
-  const now = new Date();
+function emptyForm(categoryId: string, year: number, month: number): EntryFormState {
   return {
     name: '',
     amount: '',
     kind: 'expense',
     frequency: 'monthly',
     due_day: '1',
-    due_month: String(now.getMonth() + 1),
-    due_year: String(now.getFullYear()),
+    due_month: String(month),
+    due_year: String(year),
     category_id: categoryId,
     account_id: '',
     comment: '',
@@ -92,10 +93,23 @@ function entryToForm(entry: Entry): EntryFormState {
   };
 }
 
+function monthFromSearch(searchParams: URLSearchParams): PlanMonth {
+  const current = calendarMonth();
+  const yearRaw = searchParams.get('year');
+  const monthRaw = searchParams.get('month');
+  if (yearRaw == null && monthRaw == null) return current;
+  return clampPlanMonth(
+    yearRaw == null ? current.year : Number(yearRaw),
+    monthRaw == null ? current.month : Number(monthRaw),
+    current,
+  );
+}
+
 function PlanPageInner() {
   const { planId } = useParams();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isLoaded, isSignedIn } = useAuth();
   const [data, setData] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +118,10 @@ function PlanPageInner() {
   const [viewMode, setViewMode] = useState<PlanViewMode>('list');
   const [sheet, setSheet] = useState<SheetMode>('closed');
   const [selected, setSelected] = useState<Entry | null>(null);
-  const [form, setForm] = useState<EntryFormState>(() => emptyForm(''));
+  const selectedMonth = monthFromSearch(searchParams);
+  const [form, setForm] = useState<EntryFormState>(() =>
+    emptyForm('', selectedMonth.year, selectedMonth.month),
+  );
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor'>('editor');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -118,10 +135,28 @@ function PlanPageInner() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
 
   const locale = i18n.language;
-  const now = useMemo(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() + 1 };
-  }, []);
+  const viewingCurrentMonth = isSameMonth(selectedMonth, calendarMonth());
+
+  const setSelectedMonth = useCallback(
+    (next: PlanMonth) => {
+      setSearchParams(
+        (prev) => {
+          const nextParams = new URLSearchParams(prev);
+          if (isSameMonth(next, calendarMonth())) {
+            nextParams.delete('year');
+            nextParams.delete('month');
+          } else {
+            nextParams.set('year', String(next.year));
+            nextParams.set('month', String(next.month));
+          }
+          return nextParams;
+        },
+        { replace: true },
+      );
+      if (!isSameMonth(next, calendarMonth())) setOrganizeMode(false);
+    },
+    [setSearchParams],
+  );
 
   const load = useCallback(async () => {
     if (!planId) return;
@@ -129,7 +164,7 @@ function PlanPageInner() {
     setError(null);
     try {
       const detail = await apiJson<PlanDetail>(
-        `/api/plans/${planId}?year=${now.year}&month=${now.month}`,
+        `/api/plans/${planId}?year=${selectedMonth.year}&month=${selectedMonth.month}`,
       );
       setData(detail);
     } catch (err) {
@@ -143,7 +178,7 @@ function PlanPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [planId, now.year, now.month, t]);
+  }, [planId, selectedMonth.year, selectedMonth.month, t]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) void load();
@@ -175,7 +210,7 @@ function PlanPageInner() {
   function openCreate() {
     const firstCat = data?.categories[0]?.id ?? '';
     setSelected(null);
-    setForm(emptyForm(firstCat));
+    setForm(emptyForm(firstCat, selectedMonth.year, selectedMonth.month));
     resetFieldEditors();
     setSheet('create');
   }
@@ -538,14 +573,17 @@ function PlanPageInner() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="no-print flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
-            {data.plan.name}
-          </h1>
-          <p className="text-muted text-sm">{t('plan.thisMonth')}</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-foreground min-w-0 truncate text-2xl font-semibold tracking-tight">
+          {data.plan.name}
+        </h1>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <MonthSelector
+            year={selectedMonth.year}
+            month={selectedMonth.month}
+            locale={locale}
+            onChange={setSelectedMonth}
+          />
           <div className="flex items-center gap-1" role="group" aria-label={t('plan.listView')}>
             <button
               type="button"
@@ -584,7 +622,7 @@ function PlanPageInner() {
               <MaterialSymbol name="print" />
             </button>
           </div>
-          {editable && viewMode === 'list' ? (
+          {editable && viewMode === 'list' && viewingCurrentMonth ? (
             <>
               <button
                 type="button"
@@ -662,11 +700,11 @@ function PlanPageInner() {
           categories={data.categories}
           entries={data.entries}
           accounts={data.accounts}
-          organizeMode={organizeMode && editable}
+          organizeMode={organizeMode && editable && viewingCurrentMonth}
           currency={currency}
           locale={locale}
-          year={now.year}
-          month={now.month}
+          year={selectedMonth.year}
+          month={selectedMonth.month}
           onOpenEntry={openDetails}
           onReorder={applyReorder}
         />
@@ -678,8 +716,8 @@ function PlanPageInner() {
           accounts={data.accounts}
           currency={currency}
           locale={locale}
-          year={now.year}
-          month={now.month}
+          year={selectedMonth.year}
+          month={selectedMonth.month}
         />
       ) : null}
 
@@ -691,8 +729,8 @@ function PlanPageInner() {
           accounts={data.accounts}
           currency={currency}
           locale={locale}
-          year={now.year}
-          month={now.month}
+          year={selectedMonth.year}
+          month={selectedMonth.month}
         />
       ) : null}
 
