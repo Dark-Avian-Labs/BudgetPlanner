@@ -22,7 +22,8 @@
     "retry": "Try again",
     "plans": "Plans",
     "crashTitle": "Something went wrong",
-    "crashHint": "Reload the page. If this keeps happening, sign out and back in."
+    "crashHint": "Reload the page. If this keeps happening, sign out and back in.",
+    "crashReload": "Reload"
   },
   "plan": {
     "pickMonth": "Choose month",
@@ -115,7 +116,24 @@
     "finalAmount": "Final installment",
     "details": "Details",
     "noComment": "No comment",
-    "deleteConfirm": "Delete “{{name}}”? This cannot be undone."
+    "deleteConfirm": "Delete “{{name}}”? This cannot be undone.",
+    "invalidAmount": "Enter a valid amount.",
+    "invalidFields": "Check these fields: {{fields}}",
+    "saveFailed": "Could not save this entry.",
+    "fields": {
+      "name": "name",
+      "amount_cents": "amount",
+      "kind": "type",
+      "frequency": "frequency",
+      "due_day": "due day",
+      "due_month": "due month",
+      "due_year": "due year",
+      "category_id": "category",
+      "account_id": "account",
+      "comment": "comment",
+      "end_date": "end date",
+      "final_amount_cents": "final installment"
+    }
   },
   "invite": {
     "title": "Invite collaborator",

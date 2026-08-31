@@ -88,6 +88,42 @@ describe('syncOnceArchiveState', () => {
     expect(byId['future-archived']).toBeNull();
     expect(byId.rent).toBeNull();
   });
+
+  it('unarchives a monthly row that was incorrectly archived', () => {
+    insertEntry(db, {
+      id: 'rent',
+      name: 'Rent',
+      frequency: 'monthly',
+      due_month: null,
+      due_year: null,
+      archived_at: '2026-08-01 00:00:00',
+    });
+
+    syncOnceArchiveState(db, 'p1', 2026, 8);
+
+    const row = db.prepare(`SELECT archived_at FROM entries WHERE id = 'rent'`).get() as {
+      archived_at: string | null;
+    };
+    expect(row.archived_at).toBeNull();
+  });
+
+  it('is a no-op when the plan has no once or archived rows', () => {
+    insertEntry(db, {
+      id: 'rent',
+      name: 'Rent',
+      frequency: 'monthly',
+      due_month: null,
+      due_year: null,
+    });
+    const before = db.prepare(`SELECT updated_at FROM entries WHERE id = 'rent'`).get() as {
+      updated_at: string;
+    };
+    syncOnceArchiveState(db, 'p1', 2026, 8);
+    const after = db.prepare(`SELECT updated_at FROM entries WHERE id = 'rent'`).get() as {
+      updated_at: string;
+    };
+    expect(after.updated_at).toBe(before.updated_at);
+  });
 });
 
 describe('listPlanEntries', () => {

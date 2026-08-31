@@ -15,16 +15,48 @@ const devEnv = {
 
 const children = [];
 let shuttingDown = false;
+const SHUTDOWN_DEADLINE_MS = 5_000;
+
+function tryKill(child, signal) {
+  if (child.exitCode !== null || child.signalCode) return;
+  try {
+    child.kill(signal);
+  } catch {
+    // Process already gone.
+  }
+}
 
 function shutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
-  for (const child of children) {
-    if (!child.killed) {
-      child.kill('SIGTERM');
-    }
+
+  const alive = children.filter((child) => child.exitCode === null && !child.signalCode);
+  for (const child of alive) {
+    tryKill(child, 'SIGTERM');
   }
-  setTimeout(() => process.exit(code), 100);
+
+  if (alive.length === 0) {
+    process.exit(code);
+    return;
+  }
+
+  let remaining = alive.length;
+  const forceTimer = setTimeout(() => {
+    for (const child of alive) {
+      tryKill(child, 'SIGKILL');
+    }
+    process.exit(code);
+  }, SHUTDOWN_DEADLINE_MS);
+
+  for (const child of alive) {
+    child.once('exit', () => {
+      remaining -= 1;
+      if (remaining === 0) {
+        clearTimeout(forceTimer);
+        process.exit(code);
+      }
+    });
+  }
 }
 
 function start(label, args) {

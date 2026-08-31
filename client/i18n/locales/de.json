@@ -22,7 +22,8 @@
     "retry": "Erneut versuchen",
     "plans": "Pläne",
     "crashTitle": "Etwas ist schiefgelaufen",
-    "crashHint": "Lade die Seite neu. Wenn es bleibt, melde dich ab und wieder an."
+    "crashHint": "Lade die Seite neu. Wenn es bleibt, melde dich ab und wieder an.",
+    "crashReload": "Neu laden"
   },
   "plan": {
     "pickMonth": "Monat wählen",
@@ -115,7 +116,24 @@
     "finalAmount": "Letzte Rate",
     "details": "Details",
     "noComment": "Kein Kommentar",
-    "deleteConfirm": "„{{name}}“ löschen? Das kann nicht rückgängig gemacht werden."
+    "deleteConfirm": "„{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+    "invalidAmount": "Bitte einen gültigen Betrag eingeben.",
+    "invalidFields": "Bitte diese Felder prüfen: {{fields}}",
+    "saveFailed": "Eintrag konnte nicht gespeichert werden.",
+    "fields": {
+      "name": "Name",
+      "amount_cents": "Betrag",
+      "kind": "Art",
+      "frequency": "Frequenz",
+      "due_day": "Fälligkeitstag",
+      "due_month": "Fälligkeitsmonat",
+      "due_year": "Fälligkeitsjahr",
+      "category_id": "Kategorie",
+      "account_id": "Konto",
+      "comment": "Kommentar",
+      "end_date": "Enddatum",
+      "final_amount_cents": "letzte Rate"
+    }
   },
   "invite": {
     "title": "Person einladen",

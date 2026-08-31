@@ -14,6 +14,7 @@ import {
 } from '../lib/planEntries.js';
 import { calendarMonth, clampPlanMonth } from '../lib/planMonth.js';
 import {
+  invalidFieldsBody,
   isNonNegativeInteger,
   normalizeComment,
   normalizeCurrency,
@@ -514,7 +515,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
   const body = (req.body ?? {}) as Record<string, unknown>;
   const errors = validateEntryBody(body);
   if (errors.length) {
-    res.status(400).json({ error: `Invalid fields: ${errors.join(', ')}` });
+    res.status(400).json(invalidFieldsBody(errors));
     return;
   }
 
@@ -522,7 +523,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
   let dueMonth: number | null = typeof body.due_month === 'number' ? body.due_month : null;
   let dueYear: number | null = typeof body.due_year === 'number' ? body.due_year : null;
   if (frequency !== 'monthly' && (dueMonth == null || dueMonth < 1 || dueMonth > 12)) {
-    res.status(400).json({ error: 'due_month is required for non-monthly entries' });
+    res.status(400).json(invalidFieldsBody(['due_month']));
     return;
   }
   if (frequency === 'monthly') {
@@ -530,7 +531,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
     dueYear = null;
   } else if (frequency === 'once') {
     if (dueYear == null) {
-      res.status(400).json({ error: 'due_year is required for one-time entries' });
+      res.status(400).json(invalidFieldsBody(['due_year']));
       return;
     }
   } else {
@@ -551,7 +552,7 @@ plansRouter.post('/:planId/entries', requirePlanAccess('editor'), (req: Request,
 
   const comment = normalizeComment(body.comment, null);
   if (body.comment !== undefined && body.comment !== null && comment == null) {
-    res.status(400).json({ error: 'Invalid fields: comment' });
+    res.status(400).json(invalidFieldsBody(['comment']));
     return;
   }
 
@@ -608,13 +609,13 @@ plansRouter.patch(
     const body = (req.body ?? {}) as Record<string, unknown>;
     const errors = validateEntryBody(body, true);
     if (errors.length) {
-      res.status(400).json({ error: `Invalid fields: ${errors.join(', ')}` });
+      res.status(400).json(invalidFieldsBody(errors));
       return;
     }
 
     const name = normalizeName(body.name, existing.name);
     if (!name) {
-      res.status(400).json({ error: 'Invalid fields: name' });
+      res.status(400).json(invalidFieldsBody(['name']));
       return;
     }
     const amountCents = isNonNegativeInteger(body.amount_cents)
@@ -634,12 +635,12 @@ plansRouter.patch(
       dueYear = null;
     } else {
       if (dueMonth == null || dueMonth < 1 || dueMonth > 12) {
-        res.status(400).json({ error: 'due_month is required for non-monthly entries' });
+        res.status(400).json(invalidFieldsBody(['due_month']));
         return;
       }
       if (frequency === 'once') {
         if (dueYear == null) {
-          res.status(400).json({ error: 'due_year is required for one-time entries' });
+          res.status(400).json(invalidFieldsBody(['due_year']));
           return;
         }
       } else {
@@ -666,7 +667,7 @@ plansRouter.patch(
     }
     const comment = normalizeComment(body.comment, existing.comment);
     if (body.comment !== undefined && body.comment !== null && comment == null) {
-      res.status(400).json({ error: 'Invalid fields: comment' });
+      res.status(400).json(invalidFieldsBody(['comment']));
       return;
     }
     const endDate =
@@ -804,21 +805,39 @@ plansRouter.post('/:planId/invites', requirePlanAccess('owner'), (req: Request, 
   }
 
   const token = createInviteToken();
-  const id = randomUUID();
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+  const db = getAppDb();
 
-  getAppDb()
+  const pending = db
     .prepare(
+      `SELECT id FROM plan_invites
+       WHERE plan_id = ? AND email = ? AND accepted_at IS NULL`,
+    )
+    .get(planId, email) as { id: string } | undefined;
+
+  let id: string;
+  let created = false;
+  if (pending) {
+    id = pending.id;
+    db.prepare(
+      `UPDATE plan_invites
+       SET role = ?, token = ?, invited_by = ?, expires_at = ?
+       WHERE id = ?`,
+    ).run(role, token, user.id, expiresAt, id);
+  } else {
+    id = randomUUID();
+    db.prepare(
       `INSERT INTO plan_invites (id, plan_id, email, role, token, invited_by, expires_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(id, planId, email, role, token, user.id, expiresAt);
+    ).run(id, planId, email, role, token, user.id, expiresAt);
+    created = true;
+  }
 
-  const plan = getAppDb().prepare(`SELECT name FROM plans WHERE id = ?`).get(planId) as {
+  const plan = db.prepare(`SELECT name FROM plans WHERE id = ?`).get(planId) as {
     name: string;
   };
 
-  res.status(201).json({
+  res.status(created ? 201 : 200).json({
     invite: {
       id,
       email,

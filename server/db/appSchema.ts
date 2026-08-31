@@ -107,6 +107,7 @@ export function createAppSchema(db: Database.Database): void {
   migrateAccountsColor(db);
   migrateEntriesOnceFrequency(db);
   migrateEntriesArchivedAt(db);
+  migratePendingInviteUniqueness(db);
 }
 
 function migrateAccountsColor(db: Database.Database): void {
@@ -171,6 +172,26 @@ function migrateEntriesArchivedAt(db: Database.Database): void {
     db.exec(`ALTER TABLE entries ADD COLUMN archived_at TEXT`);
   }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_entries_archived ON entries(plan_id, archived_at)`);
+}
+
+function migratePendingInviteUniqueness(db: Database.Database): void {
+  const tables = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'plan_invites'`)
+    .get() as { name: string } | undefined;
+  if (!tables) return;
+
+  db.exec(`
+    DELETE FROM plan_invites
+    WHERE accepted_at IS NULL
+      AND rowid NOT IN (
+        SELECT MAX(rowid)
+        FROM plan_invites
+        WHERE accepted_at IS NULL
+        GROUP BY plan_id, email
+      );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_plan_invites_pending_email
+      ON plan_invites(plan_id, email) WHERE accepted_at IS NULL;
+  `);
 }
 
 function rebuildEntriesTable(db: Database.Database, includeOnce: boolean): void {

@@ -117,3 +117,7 @@ export function validateEntryBody(body: Record<string, unknown>, partial = false
   }
   return errors;
 }
+
+export function invalidFieldsBody(fields: string[]): { error: 'Invalid fields'; fields: string[] } {
+  return { error: 'Invalid fields', fields };
+}
