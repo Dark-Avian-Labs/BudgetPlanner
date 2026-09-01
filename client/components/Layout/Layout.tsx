@@ -26,7 +26,10 @@ function ClerkTokenBridge() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    setClerkTokenGetter(() => getToken());
+    setClerkTokenGetter((options) => getToken(options));
+    return () => {
+      setClerkTokenGetter(null);
+    };
   }, [getToken]);
 
   useEffect(() => {
