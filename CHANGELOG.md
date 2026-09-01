@@ -31,3 +31,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.4.0** `chore` [#28](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/28): feat/plan month selector
 - **v1.5.0** `chore` [#29](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/29): feat/plan month picker and auth
 - **v1.5.1** `chore` [#30](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/30): audit/fable
+- **v1.5.2** `chore` [#31](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/31): fix/clerk bearer token retry
