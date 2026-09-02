@@ -1,6 +1,10 @@
 import type Database from 'better-sqlite3';
 
-import { ACCOUNT_COLORS } from '../../shared/accountColors.js';
+import {
+  ACCOUNT_COLORS,
+  DEFAULT_ACCOUNT_COLOR,
+  remapAccountColor,
+} from '../../shared/accountColors.js';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 export type EntryKind = 'expense' | 'income' | 'credit';
@@ -88,7 +92,7 @@ export function createAppSchema(db: Database.Database): void {
       id TEXT PRIMARY KEY,
       plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
-      color TEXT NOT NULL DEFAULT 'sky',
+      color TEXT NOT NULL DEFAULT '${DEFAULT_ACCOUNT_COLOR}',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -105,6 +109,7 @@ export function createAppSchema(db: Database.Database): void {
 
   migrateEntriesHalfyearlyFrequency(db);
   migrateAccountsColor(db);
+  migrateAccountColorLadder(db);
   migrateEntriesOnceFrequency(db);
   migrateEntriesArchivedAt(db);
   migratePendingInviteUniqueness(db);
@@ -114,7 +119,7 @@ function migrateAccountsColor(db: Database.Database): void {
   const cols = db.prepare(`PRAGMA table_info(accounts)`).all() as Array<{ name: string }>;
   if (cols.some((c) => c.name === 'color')) return;
 
-  db.exec(`ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT 'sky'`);
+  db.exec(`ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT '${DEFAULT_ACCOUNT_COLOR}'`);
 
   const accounts = db
     .prepare(`SELECT id, plan_id FROM accounts ORDER BY plan_id, sort_order, name`)
@@ -128,6 +133,29 @@ function migrateAccountsColor(db: Database.Database): void {
       counts.set(account.plan_id, index + 1);
       const color = ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]!;
       update.run(color, account.id);
+    }
+  });
+  tx();
+}
+
+function migrateAccountColorLadder(db: Database.Database): void {
+  const table = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'accounts'`)
+    .get() as { name: string } | undefined;
+  if (!table) return;
+
+  const cols = db.prepare(`PRAGMA table_info(accounts)`).all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'color')) return;
+
+  const rows = db.prepare(`SELECT id, color FROM accounts`).all() as Array<{
+    id: string;
+    color: string;
+  }>;
+  const update = db.prepare(`UPDATE accounts SET color = ? WHERE id = ?`);
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      const next = remapAccountColor(row.color);
+      if (next && next !== row.color) update.run(next, row.id);
     }
   });
   tx();

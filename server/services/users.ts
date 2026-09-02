@@ -51,8 +51,11 @@ export function upsertUserFromClerk(
   return row;
 }
 
-export function getUserById(id: string): AppUser | null {
-  const row = getAppDb()
+export function getUserById(
+  id: string,
+  db: ReturnType<typeof getAppDb> = getAppDb(),
+): AppUser | null {
+  const row = db
     .prepare(`SELECT id, clerk_user_id, email, locale, default_plan_id FROM users WHERE id = ?`)
     .get(id) as AppUser | undefined;
   return row ?? null;
@@ -61,21 +64,20 @@ export function getUserById(id: string): AppUser | null {
 export function updateUserPreferences(
   userId: string,
   patch: { locale?: string; default_plan_id?: string | null },
+  db: ReturnType<typeof getAppDb> = getAppDb(),
 ): AppUser {
-  const user = getUserById(userId);
+  const user = getUserById(userId, db);
   if (!user) throw new Error('User not found');
 
   const locale = patch.locale ?? user.locale;
   const defaultPlanId =
     patch.default_plan_id !== undefined ? patch.default_plan_id : user.default_plan_id;
 
-  getAppDb()
-    .prepare(
-      `UPDATE users
-       SET locale = ?, default_plan_id = ?, updated_at = datetime('now')
-       WHERE id = ?`,
-    )
-    .run(locale, defaultPlanId, userId);
+  db.prepare(
+    `UPDATE users
+     SET locale = ?, default_plan_id = ?, updated_at = datetime('now')
+     WHERE id = ?`,
+  ).run(locale, defaultPlanId, userId);
 
   return { ...user, locale, default_plan_id: defaultPlanId };
 }

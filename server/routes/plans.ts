@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 
 import { Router, type Request, type Response } from 'express';
 
-import { isAccountColor, nextAccountColor } from '../../shared/accountColors.js';
+import { nextAccountColor, remapAccountColor } from '../../shared/accountColors.js';
 import { computeMonthTotals } from '../../shared/dueThisMonth.js';
 import { calendarMonth, clampPlanMonth } from '../../shared/planMonth.js';
 import type { EntryFrequency, EntryKind, MemberRole } from '../db/appSchema.js';
@@ -441,9 +441,7 @@ plansRouter.post(
         color: string;
       }>
     ).map((r) => r.color);
-    const color = isAccountColor(req.body?.color)
-      ? req.body.color
-      : nextAccountColor(existingColors);
+    const color = remapAccountColor(req.body?.color) ?? nextAccountColor(existingColors);
     const max = db
       .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS m FROM accounts WHERE plan_id = ?`)
       .get(planId) as { m: number };
@@ -482,7 +480,7 @@ plansRouter.patch(
     const sortOrder = isNonNegativeInteger(req.body?.sort_order)
       ? req.body.sort_order
       : existing.sort_order;
-    const color = isAccountColor(req.body?.color) ? req.body.color : existing.color;
+    const color = remapAccountColor(req.body?.color) ?? existing.color;
     db.prepare(
       `UPDATE accounts SET name = ?, color = ?, sort_order = ?, updated_at = datetime('now') WHERE id = ?`,
     ).run(name, color, sortOrder, accountId);

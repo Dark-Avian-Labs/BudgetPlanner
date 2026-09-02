@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isAccountColor, nextAccountColor, type AccountColor } from '../../../shared/accountColors';
+import {
+  DEFAULT_ACCOUNT_COLOR,
+  nextAccountColor,
+  remapAccountColor,
+  type AccountColor,
+} from '../../../shared/accountColors';
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR, type PlanMonth } from '../../../shared/planMonth';
 import { AccountColorPicker } from '../../components/budget/AccountColorPicker';
 import { Button } from '../../components/ui/Button';
@@ -127,14 +132,14 @@ export function EntrySheet({
   const [categoryEditor, setCategoryEditor] = useState<FieldEditor>('closed');
   const [accountEditor, setAccountEditor] = useState<FieldEditor>('closed');
   const [newAccountName, setNewAccountName] = useState('');
-  const [accountColorDraft, setAccountColorDraft] = useState<AccountColor>('sky');
+  const [accountColorDraft, setAccountColorDraft] = useState<AccountColor>(DEFAULT_ACCOUNT_COLOR);
   const [newCategoryName, setNewCategoryName] = useState('');
 
   function resetFieldEditors() {
     setCategoryEditor('closed');
     setAccountEditor('closed');
     setNewAccountName('');
-    setAccountColorDraft('sky');
+    setAccountColorDraft(DEFAULT_ACCOUNT_COLOR);
     setNewCategoryName('');
   }
 
@@ -170,7 +175,7 @@ export function EntrySheet({
     if (!acc) return;
     setCategoryEditor('closed');
     setNewAccountName(acc.name);
-    setAccountColorDraft(isAccountColor(acc.color) ? acc.color : 'sky');
+    setAccountColorDraft(remapAccountColor(acc.color) ?? DEFAULT_ACCOUNT_COLOR);
     setAccountEditor('rename');
   }
 
@@ -528,11 +533,14 @@ export function EntrySheet({
               placeholder={t('plan.noAccount')}
               options={[
                 { value: '', label: t('plan.noAccount') },
-                ...data.accounts.map((a) => ({
-                  value: a.id,
-                  label: a.name,
-                  swatchClass: isAccountColor(a.color) ? `account-swatch--${a.color}` : undefined,
-                })),
+                ...data.accounts.map((a) => {
+                  const color = remapAccountColor(a.color);
+                  return {
+                    value: a.id,
+                    label: a.name,
+                    swatchClass: color ? `account-swatch--${color}` : undefined,
+                  };
+                }),
               ]}
               onChange={(value) => {
                 setForm((f) => ({ ...f, account_id: value }));

@@ -87,6 +87,17 @@
   --color-bg-glow: oklch(55% 0.04 252 / 0.2);
 
   --shadow-panel: 0 8px 32px oklch(0% 0 0 / 0.25);
+
+  --color-rarity-gray: oklch(72% 0.015 260);
+  --color-rarity-white: oklch(88% 0.005 264);
+  --color-rarity-green: oklch(72% 0.18 145);
+  --color-rarity-teal: oklch(74% 0.12 192);
+  --color-rarity-blue: oklch(68% 0.16 264);
+  --color-rarity-purple: oklch(66% 0.22 300);
+  --color-rarity-pink: oklch(70% 0.18 330);
+  --color-rarity-gold: oklch(80% 0.14 85);
+  --color-rarity-orange: oklch(70% 0.18 55);
+  --color-rarity-red: oklch(62% 0.2 28);
 }
 
 :root {
@@ -1664,48 +1675,49 @@ html.ui-clear .stale-update-banner::after {
   color: var(--color-foreground);
 }
 
-:root {
-  --account-color-rose: oklch(68% 0.19 18);
-  --account-color-orange: oklch(72% 0.17 55);
-  --account-color-amber: oklch(78% 0.15 85);
-  --account-color-lime: oklch(78% 0.17 130);
-  --account-color-teal: oklch(72% 0.12 185);
-  --account-color-sky: oklch(72% 0.12 230);
-  --account-color-indigo: oklch(65% 0.16 275);
-  --account-color-violet: oklch(68% 0.18 305);
-  --account-color-fuchsia: oklch(68% 0.2 340);
-}
-
 .entry-row[data-account-color] {
   box-shadow: inset 3px 0 0 var(--account-token);
 }
 
-.entry-row[data-account-color='rose'] {
-  --account-token: var(--account-color-rose);
+.entry-row[data-account-color='red'],
+.account-swatch--red,
+.account-color-swatch--red {
+  --account-token: var(--color-rarity-red);
 }
-.entry-row[data-account-color='orange'] {
-  --account-token: var(--account-color-orange);
+.entry-row[data-account-color='orange'],
+.account-swatch--orange,
+.account-color-swatch--orange {
+  --account-token: var(--color-rarity-orange);
 }
-.entry-row[data-account-color='amber'] {
-  --account-token: var(--account-color-amber);
+.entry-row[data-account-color='gold'],
+.account-swatch--gold,
+.account-color-swatch--gold {
+  --account-token: var(--color-rarity-gold);
 }
-.entry-row[data-account-color='lime'] {
-  --account-token: var(--account-color-lime);
+.entry-row[data-account-color='green'],
+.account-swatch--green,
+.account-color-swatch--green {
+  --account-token: var(--color-rarity-green);
 }
-.entry-row[data-account-color='teal'] {
-  --account-token: var(--account-color-teal);
+.entry-row[data-account-color='teal'],
+.account-swatch--teal,
+.account-color-swatch--teal {
+  --account-token: var(--color-rarity-teal);
 }
-.entry-row[data-account-color='sky'] {
-  --account-token: var(--account-color-sky);
+.entry-row[data-account-color='blue'],
+.account-swatch--blue,
+.account-color-swatch--blue {
+  --account-token: var(--color-rarity-blue);
 }
-.entry-row[data-account-color='indigo'] {
-  --account-token: var(--account-color-indigo);
+.entry-row[data-account-color='purple'],
+.account-swatch--purple,
+.account-color-swatch--purple {
+  --account-token: var(--color-rarity-purple);
 }
-.entry-row[data-account-color='violet'] {
-  --account-token: var(--account-color-violet);
-}
-.entry-row[data-account-color='fuchsia'] {
-  --account-token: var(--account-color-fuchsia);
+.entry-row[data-account-color='pink'],
+.account-swatch--pink,
+.account-color-swatch--pink {
+  --account-token: var(--color-rarity-pink);
 }
 
 .entry-row--inactive {
@@ -1731,6 +1743,7 @@ html.ui-clear .stale-update-banner::after {
   border-radius: 999px;
   flex-shrink: 0;
   box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.2);
+  background: var(--account-token);
 }
 
 .account-color-swatch {
@@ -1746,43 +1759,6 @@ html.ui-clear .stale-update-banner::after {
 .account-color-swatch--selected {
   border-color: var(--color-foreground);
   transform: scale(1.08);
-}
-
-.account-swatch--rose,
-.account-color-swatch--rose {
-  background: var(--account-color-rose);
-}
-.account-swatch--orange,
-.account-color-swatch--orange {
-  background: var(--account-color-orange);
-}
-.account-swatch--amber,
-.account-color-swatch--amber {
-  background: var(--account-color-amber);
-}
-.account-swatch--lime,
-.account-color-swatch--lime {
-  background: var(--account-color-lime);
-}
-.account-swatch--teal,
-.account-color-swatch--teal {
-  background: var(--account-color-teal);
-}
-.account-swatch--sky,
-.account-color-swatch--sky {
-  background: var(--account-color-sky);
-}
-.account-swatch--indigo,
-.account-color-swatch--indigo {
-  background: var(--account-color-indigo);
-}
-.account-swatch--violet,
-.account-color-swatch--violet {
-  background: var(--account-color-violet);
-}
-.account-swatch--fuchsia,
-.account-color-swatch--fuchsia {
-  background: var(--account-color-fuchsia);
 }
 
 .entry-row__skip-badge {

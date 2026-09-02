@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createAppSchema } from '../db/appSchema.js';
-import { getUserByClerkId, upsertUserFromClerk } from './users.js';
+import { getUserByClerkId, getUserById, updateUserPreferences, upsertUserFromClerk } from './users.js';
 
 describe('upsertUserFromClerk', () => {
   let db: Database.Database;
@@ -35,5 +35,16 @@ describe('upsertUserFromClerk', () => {
     expect(found?.id).toBe(created.id);
     expect(found?.email).toBe('one@example.com');
     expect(getUserByClerkId('missing', db)).toBeNull();
+  });
+
+  it('stores locale per user', () => {
+    const owner = upsertUserFromClerk('clerk_owner', 'owner@example.com', db);
+    const member = upsertUserFromClerk('clerk_member', 'member@example.com', db);
+
+    updateUserPreferences(owner.id, { locale: 'de' }, db);
+    updateUserPreferences(member.id, { locale: 'en' }, db);
+
+    expect(getUserById(owner.id, db)?.locale).toBe('de');
+    expect(getUserById(member.id, db)?.locale).toBe('en');
   });
 });

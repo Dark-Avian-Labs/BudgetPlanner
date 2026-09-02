@@ -1,4 +1,4 @@
-import { Show, SignInButton, SignOutButton, UserButton, useAuth } from '@clerk/react';
+import { Show, SignInButton, useAuth, useClerk } from '@clerk/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet } from 'react-router';
@@ -11,11 +11,13 @@ import {
   LEGAL_PAGE_URL,
 } from '../../app/config';
 import { APP_PATHS } from '../../app/paths';
+import { buildClerkProfileAppearance } from '../../clerk';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Menu } from '../../components/ui/Menu';
 import { UiStyleSelector } from '../../components/ui/UiStyleSelector';
 import { useTheme } from '../../context/ThemeContext';
-import { LOCALES, setUserLocale, syncLocaleFromServer, type AppLocale } from '../../lib/locale';
+import { bindLocaleOwner, syncLocaleFromServer } from '../../lib/locale';
 import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
 import { HexSideBackground } from './HexSideBackground';
@@ -33,56 +35,88 @@ function ClerkTokenBridge() {
   }, [getToken]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      bindLocaleOwner(null);
+      return;
+    }
     void syncLocaleFromServer();
   }, [isLoaded, isSignedIn]);
 
   return null;
 }
 
-function AuthMenuItems({ onClose }: { onClose: () => void }) {
+function ClerkSessionMenu({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const clerk = useClerk();
+  const { isSignedIn } = useAuth();
+  const { mode } = useTheme();
+
+  if (!isSignedIn) {
+    return (
+      <>
+        <Link to={APP_PATHS.signIn} className="user-menu-item" role="menuitem" onClick={onClose}>
+          {t('app.signIn')}
+        </Link>
+        <div className="user-menu-divider" role="separator" />
+        <LanguageSelector syncRemote={false} />
+        <UiStyleSelector />
+      </>
+    );
+  }
+
   return (
     <>
+      <button
+        type="button"
+        className="user-menu-item text-left"
+        role="menuitem"
+        onClick={() => {
+          onClose();
+          clerk.openUserProfile({
+            appearance: buildClerkProfileAppearance(mode),
+          });
+        }}
+      >
+        {t('app.profile')}
+      </button>
       <div className="user-menu-divider" role="separator" />
-      <Show when="signed-in">
-        <div className="flex items-center justify-between gap-2 px-2 py-1">
-          <UserButton />
-          <SignOutButton>
-            <button type="button" className="btn btn-cancel !min-h-8 !text-xs" onClick={onClose}>
-              {t('app.signOut')}
-            </button>
-          </SignOutButton>
-        </div>
-      </Show>
-      <Show when="signed-out">
-        <SignInButton mode="modal">
-          <button type="button" className="btn btn-accent mx-2 mb-1 !min-h-8" onClick={onClose}>
-            {t('app.signIn')}
-          </button>
-        </SignInButton>
-      </Show>
+      <LanguageSelector syncRemote />
+      <UiStyleSelector />
+      <button
+        type="button"
+        className="user-menu-item text-left"
+        role="menuitem"
+        onClick={() => {
+          onClose();
+          bindLocaleOwner(null);
+          void clerk.signOut({ redirectUrl: '/' });
+        }}
+      >
+        {t('app.logout')}
+      </button>
     </>
   );
 }
 
 export function Layout() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { mode, toggleMode } = useTheme();
   const currentYear = new Date().getFullYear();
-  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const clerkEnabled = Boolean(CLERK_PUBLISHABLE_KEY);
+  const userMenuId = 'budgetplanner-user-menu';
 
   useEffect(() => {
-    if (!settingsMenuOpen) return undefined;
+    if (!userMenuOpen) return undefined;
     const handlePointerDown = (event: MouseEvent) => {
       if (!menuRef.current?.contains(event.target as Node)) {
-        setSettingsMenuOpen(false);
+        setUserMenuOpen(false);
       }
     };
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSettingsMenuOpen(false);
+      if (event.key === 'Escape') setUserMenuOpen(false);
     };
     document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleEscape);
@@ -90,12 +124,7 @@ export function Layout() {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [settingsMenuOpen]);
-
-  async function chooseLocale(lng: AppLocale) {
-    await setUserLocale(lng, clerkEnabled);
-    setSettingsMenuOpen(false);
-  }
+  }, [userMenuOpen]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -127,42 +156,27 @@ export function Layout() {
                 type="button"
                 className="icon-toggle-btn"
                 aria-haspopup="menu"
-                aria-expanded={settingsMenuOpen}
-                aria-label={t('app.settings')}
-                onClick={() => setSettingsMenuOpen((prev) => !prev)}
+                aria-expanded={userMenuOpen}
+                aria-controls={userMenuOpen ? userMenuId : undefined}
+                aria-label={t('app.userMenu')}
+                onClick={() => setUserMenuOpen((prev) => !prev)}
               >
-                <MaterialSymbol name="settings" />
+                <MaterialSymbol name="person" filled />
               </button>
-              {settingsMenuOpen && (
+              {userMenuOpen ? (
                 <Menu>
-                  <div className="flex flex-col gap-2 p-1">
-                    <div className="text-muted px-2 text-xs tracking-wide uppercase">
-                      {t('app.language')}
-                    </div>
-                    <div className="flex gap-2 px-2">
-                      {LOCALES.map((lng) => (
-                        <button
-                          key={lng}
-                          type="button"
-                          className={`btn btn-secondary !min-h-8 !px-3 !text-xs ${
-                            i18n.language.startsWith(lng) ? '!bg-accent/20' : ''
-                          }`}
-                          onClick={() => {
-                            void chooseLocale(lng);
-                          }}
-                        >
-                          {lng.toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="user-menu-divider" role="separator" />
-                    <UiStyleSelector />
+                  <div id={userMenuId} role="menu" aria-orientation="vertical">
                     {clerkEnabled ? (
-                      <AuthMenuItems onClose={() => setSettingsMenuOpen(false)} />
-                    ) : null}
+                      <ClerkSessionMenu onClose={() => setUserMenuOpen(false)} />
+                    ) : (
+                      <>
+                        <LanguageSelector syncRemote={false} />
+                        <UiStyleSelector />
+                      </>
+                    )}
                   </div>
                 </Menu>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

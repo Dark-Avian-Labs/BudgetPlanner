@@ -163,4 +163,59 @@ describe('createAppSchema', () => {
     expect(pending[0]?.email).toBe('x@y.z');
     db.close();
   });
+
+  it('remaps legacy account colors onto the rarity ladder', () => {
+    const db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        clerk_user_id TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL,
+        locale TEXT NOT NULL DEFAULT 'en',
+        default_plan_id TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'EUR',
+        owner_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE accounts (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL DEFAULT 'sky',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO users (id, clerk_user_id, email) VALUES ('u1', 'c1', 'a@b.c');
+      INSERT INTO plans (id, name, owner_user_id) VALUES ('p1', 'Home', 'u1');
+      INSERT INTO accounts (id, plan_id, name, color, sort_order) VALUES
+        ('a1', 'p1', 'Rose', 'rose', 0),
+        ('a2', 'p1', 'Sky', 'sky', 1),
+        ('a3', 'p1', 'Indigo', 'indigo', 2),
+        ('a4', 'p1', 'Violet', 'violet', 3),
+        ('a5', 'p1', 'Orange', 'orange', 4);
+    `);
+
+    createAppSchema(db);
+
+    const rows = db.prepare(`SELECT id, color FROM accounts ORDER BY sort_order`).all() as Array<{
+      id: string;
+      color: string;
+    }>;
+    expect(rows).toEqual([
+      { id: 'a1', color: 'red' },
+      { id: 'a2', color: 'blue' },
+      { id: 'a3', color: 'blue' },
+      { id: 'a4', color: 'purple' },
+      { id: 'a5', color: 'orange' },
+    ]);
+    db.close();
+  });
 });
