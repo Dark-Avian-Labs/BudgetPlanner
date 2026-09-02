@@ -1,7 +1,3 @@
-import { frequencyNumber } from './dueThisMonth';
-
-export { frequencyNumber };
-
 export function formatMoney(
   amountCents: number,
   currency: string,

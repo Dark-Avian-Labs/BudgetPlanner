@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { SelectDropdown } from '../../components/ui/SelectDropdown';
 import {
   calendarMonth,
   enumerateMonths,
@@ -10,7 +9,8 @@ import {
   monthKey,
   parseMonthKey,
   shiftMonth,
-} from '../../lib/planMonth';
+} from '../../../shared/planMonth';
+import { SelectDropdown } from '../../components/ui/SelectDropdown';
 
 const MONTHS_BACK = 24;
 const MONTHS_FORWARD = 12;
@@ -30,7 +30,6 @@ export function MonthSelector({
   onChange: (next: { year: number; month: number }) => void;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
 
   const options = useMemo(() => {
     const now = calendarMonth();
@@ -58,8 +57,6 @@ export function MonthSelector({
         const parsed = parseMonthKey(value);
         if (parsed) onChange(parsed);
       }}
-      open={open}
-      onOpenChange={setOpen}
       buttonAriaLabel={t('plan.pickMonth')}
       triggerClassName={TRIGGER_CLASS}
       placement="floating"

@@ -111,6 +111,8 @@ Use one key per environment to reduce blast radius.
 | `SESSION_COOKIE_NAME`                   | Session cookie key (defaults to `<APP_ID>.sid`).                                      |
 | `TRUST_PROXY`, `SECURE_COOKIES`         | Reverse proxy and HTTPS-only cookie behavior.                                         |
 | `COOKIE_DOMAIN`                         | Optional shared cookie domain.                                                        |
+| `APP_PUBLIC_BASE_URL`                   | Public origin; required when Clerk is enabled (authorized parties).                   |
+| `ALLOWED_APP_ORIGINS`                   | Extra Clerk authorized-party origins (comma-separated sibling apps).                  |
 | `SESSION_DB_PATH`                       | SQLite session store location (default `./data/sessions.db`).                         |
 | `APP_DB_PATH`                           | App SQLite path (default `./data/app.db`).                                            |
 | `CLERK_SECRET_KEY`                      | **Required in production.** Clerk secret key for server-side session verification.    |

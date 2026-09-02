@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { amountForMonth, isDueInMonth } from '../../lib/dueThisMonth';
+import { amountForMonth, isDueInMonth } from '../../../shared/dueThisMonth';
+import { formatMonthLabel } from '../../../shared/planMonth';
 import { formatMoney } from '../../lib/format';
-import { formatMonthLabel } from '../../lib/planMonth';
 import type { Account, Entry } from '../../lib/types';
 
 interface AccountBreakdown {

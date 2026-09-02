@@ -7,6 +7,7 @@ import express from 'express';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
 
+import { getClerkAuthorizedParties } from './auth/clerkAuthorizedParties.js';
 import {
   PORT,
   HOST,
@@ -73,7 +74,7 @@ app.get('/readyz', (_req, res) => {
 });
 
 if (CLERK_CONFIGURED) {
-  app.use(clerkMiddleware());
+  app.use(clerkMiddleware({ authorizedParties: getClerkAuthorizedParties() }));
   console.log(`[${APP_NAME}] Clerk auth enabled`);
 } else {
   console.warn(`[${APP_NAME}] Clerk keys missing — auth routes will return 503`);
@@ -89,6 +90,7 @@ const baselineLimiter = rateLimit({
     req.path === '/readyz' ||
     req.path === '/api/version' ||
     req.path === '/favicon.ico' ||
+    req.path === '/favicon.png' ||
     /^\/assets\/.+\.(?:css|js|png|jpe?g|gif|webp|svg|ico|woff2?)$/i.test(req.path),
 });
 app.use(baselineLimiter);
@@ -181,8 +183,12 @@ app.get('/api/version', (_req, res) => {
 
 app.use('/api', appApiLimiter, apiRouter);
 
+const faviconPng = path.join(PROJECT_ROOT, 'favicon.png');
+app.get('/favicon.png', publicPageLimiter, (_req, res) => {
+  res.sendFile(faviconPng);
+});
 app.get('/favicon.ico', publicPageLimiter, (_req, res) => {
-  res.sendFile(path.join(PROJECT_ROOT, 'favicon.ico'));
+  res.sendFile(faviconPng);
 });
 
 app.use('/api', (_req, res) => {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { CURRENCIES } from '../../shared/currencies.js';
 import {
-  ALLOWED_CURRENCIES,
-  clampPlanYear,
   invalidFieldsBody,
   isNonNegativeInteger,
   normalizeComment,
@@ -15,7 +14,7 @@ describe('normalizeCurrency', () => {
   it('accepts the allowlist and falls back when empty', () => {
     expect(normalizeCurrency(undefined, 'EUR')).toBe('EUR');
     expect(normalizeCurrency('usd', 'EUR')).toBe('USD');
-    expect(ALLOWED_CURRENCIES).toContain('CHF');
+    expect(CURRENCIES).toContain('CHF');
   });
 
   it('rejects unknown codes', () => {
@@ -38,15 +37,6 @@ describe('normalizeComment', () => {
     expect(normalizeComment(undefined, 'keep')).toBe('keep');
     expect(normalizeComment('  note  ', null)).toBe('note');
     expect(normalizeComment('x'.repeat(2001), null)).toBeNull();
-  });
-});
-
-describe('clampPlanYear', () => {
-  it('clamps to 2000–2100', () => {
-    expect(clampPlanYear(1999, 2026)).toBe(2000);
-    expect(clampPlanYear(2101, 2026)).toBe(2100);
-    expect(clampPlanYear(2026, 2000)).toBe(2026);
-    expect(clampPlanYear(Number.NaN, 2026)).toBe(2026);
   });
 });
 

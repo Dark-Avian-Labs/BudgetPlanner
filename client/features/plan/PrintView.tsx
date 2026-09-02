@@ -1,9 +1,9 @@
 import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { amountForMonth, isDueInMonth } from '../../lib/dueThisMonth';
+import { amountForMonth, isDueInMonth } from '../../../shared/dueThisMonth';
+import { formatMonthLabel } from '../../../shared/planMonth';
 import { formatDueDay, formatDueMonthDay, formatMoney } from '../../lib/format';
-import { formatMonthLabel } from '../../lib/planMonth';
 import type { Account, Category, Entry } from '../../lib/types';
 
 export function PrintView({

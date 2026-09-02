@@ -22,7 +22,7 @@ function tryKill(child, signal) {
   try {
     child.kill(signal);
   } catch {
-    // Process already gone.
+    // ignore
   }
 }
 

@@ -1,4 +1,4 @@
-import { computeMonthTotals } from './dueThisMonth';
+import { computeMonthTotals } from '../../shared/dueThisMonth';
 import type { Entry, PlanDetail } from './types';
 
 export function isEntryVisibleInMonth(entry: Entry, year: number, month: number): boolean {

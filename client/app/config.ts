@@ -57,5 +57,3 @@ export const CLERK_PUBLISHABLE_KEY = readTrimmedEnv(
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined,
   '',
 );
-
-export const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK'] as const;

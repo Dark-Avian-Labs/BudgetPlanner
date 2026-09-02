@@ -16,9 +16,9 @@ import { CSS } from '@dnd-kit/utilities';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { amountForMonth, isDueInMonth } from '../../../shared/dueThisMonth';
 import { FrequencyBadge } from '../../components/budget/FrequencyBadge';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
-import { amountForMonth, isDueInMonth } from '../../lib/dueThisMonth';
 import { formatDueDay, formatDueMonthDay, formatMoney } from '../../lib/format';
 import type { Account, Category, Entry } from '../../lib/types';
 

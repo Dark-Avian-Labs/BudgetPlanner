@@ -33,7 +33,7 @@ Two SQLite files. Do not point them at the same path, and do not reuse Armory or
 
 Clerk keys are required for auth routes; without them those routes return **503** (the server still starts). That differs from Armory/Codex, where placeholder keys 500 every request. Leave keys empty or fill real ones; do not copy placeholder keys from those apps. CSRF tokens rotate when the Clerk user id on the express session changes (`server/session/bindClerkUserSession.ts`).
 
-Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a login. Keep `VITE_*` plaintext; encrypting them garbles `vite build`. If you add app roles later, configure the Clerk session token with `"metadata": "{{user.public_metadata}}"` (`apps.budgetplanner`).
+Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a login. `APP_PUBLIC_BASE_URL` is required when Clerk is configured; `ALLOWED_APP_ORIGINS` lists sibling apps for Clerk `authorizedParties`. Keep `VITE_*` plaintext; encrypting them garbles `vite build`. If you add app roles later, configure the Clerk session token with `"metadata": "{{user.public_metadata}}"` (`apps.budgetplanner`).
 
 ## Toolchain
 

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { ACCOUNT_COLORS, type AccountColor } from '../../lib/accountColors';
+import { ACCOUNT_COLORS, type AccountColor } from '../../../shared/accountColors';
 
 export function AccountColorPicker({
   value,

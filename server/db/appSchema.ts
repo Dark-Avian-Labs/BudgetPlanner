@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-import { ACCOUNT_COLORS } from '../lib/accountColors.js';
+import { ACCOUNT_COLORS } from '../../shared/accountColors.js';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 export type EntryKind = 'expense' | 'income' | 'credit';
