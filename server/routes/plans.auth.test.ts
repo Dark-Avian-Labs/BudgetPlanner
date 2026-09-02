@@ -179,7 +179,7 @@ describe('plan authorization and invites', () => {
 
       const foreignAccountId = 'acct-other';
       dbState
-        .db!.prepare(`INSERT INTO accounts (id, plan_id, name, color, sort_order) VALUES (?, ?, 'Bank', 'sky', 0)`)
+        .db!.prepare(`INSERT INTO accounts (id, plan_id, name, color, sort_order) VALUES (?, ?, 'Bank', 'blue', 0)`)
         .run(foreignAccountId, otherPlanId);
       const crossAccount = await http(base, 'POST', `/api/plans/${planId}/entries`, {
         ...monthlyEntry(categoryId, 'With account'),
