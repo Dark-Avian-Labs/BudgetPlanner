@@ -45,7 +45,8 @@
     "pnpm-lock.yaml",
     "**/pnpm-lock.yaml",
     "assets/**",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "cleanup-audit.html"
   ],
 
   "overrides": [

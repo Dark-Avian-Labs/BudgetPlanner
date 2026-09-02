@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { amountForMonth, computeMonthTotals, isDueInMonth, isOnceEntryExpired } from './dueThisMonth.js';
+import { amountForMonth, computeMonthTotals, isDueInMonth, isOnceEntryExpired } from '../../shared/dueThisMonth.js';
 
 describe('isDueInMonth', () => {
   it('includes monthly entries every month', () => {

@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
-import { frequencyNumber } from '../../lib/dueThisMonth';
+import { frequencyMonths } from '../../../shared/dueThisMonth';
 import type { EntryFrequency } from '../../lib/types';
 import { MaterialSymbol } from '../ui/MaterialSymbol';
 
 export function FrequencyBadge({ frequency }: { frequency: EntryFrequency }) {
   const { t } = useTranslation();
-  const n = frequencyNumber(frequency);
+  const n = frequencyMonths(frequency);
   const label = t(`entry.${frequency}`);
 
   return (

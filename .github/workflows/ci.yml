@@ -25,7 +25,7 @@ on:
       - 'tests/**'
       - 'scripts/**'
       - 'shared/**'
-      - 'favicon.ico'
+      - 'favicon.png'
       - '.env.production'
       - '.releaserc.json'
       - '.github/workflows/ci.yml'
@@ -286,7 +286,7 @@ jobs:
           if [ -d icons ]; then cp -r icons/ /tmp/deploy/; fi
           cp package.json pnpm-lock.yaml pnpm-workspace.yaml /tmp/deploy/
           if [ -f .env.production ]; then cp .env.production /tmp/deploy/; fi
-          if [ -f favicon.ico ]; then cp favicon.ico /tmp/deploy/; fi
+          if [ -f favicon.png ]; then cp favicon.png /tmp/deploy/; fi
           printf 'DOTENV_PRIVATE_KEY_PRODUCTION=%s\n' "$DOTENV_PRIVATE_KEY_PRODUCTION" > /tmp/deploy/.env.keys
           chmod 600 /tmp/deploy/.env.keys
           test -s /tmp/deploy/.env.keys || { echo "ERROR: Failed to create .env.keys in deployment bundle."; exit 1; }

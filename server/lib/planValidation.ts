@@ -1,15 +1,14 @@
+import { CURRENCIES, type AllowedCurrency } from '../../shared/currencies.js';
 import { parseIsoDate } from '../../shared/dueThisMonth.js';
 import { MAX_COMMENT_LENGTH, MAX_NAME_LENGTH } from '../../shared/entryLimits.js';
 import { MAX_PLAN_YEAR, MIN_PLAN_YEAR } from '../../shared/planMonth.js';
 
-export const ALLOWED_CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK'] as const;
-export type AllowedCurrency = (typeof ALLOWED_CURRENCIES)[number];
-
+export type { AllowedCurrency };
 export { MAX_COMMENT_LENGTH, MAX_NAME_LENGTH };
 export const MIN_YEAR = MIN_PLAN_YEAR;
 export const MAX_YEAR = MAX_PLAN_YEAR;
 
-const ALLOWED_CURRENCY_SET = new Set<string>(ALLOWED_CURRENCIES);
+const ALLOWED_CURRENCY_SET = new Set<string>(CURRENCIES);
 
 export function isAllowedCurrency(value: string): value is AllowedCurrency {
   return ALLOWED_CURRENCY_SET.has(value);
@@ -38,11 +37,6 @@ export function normalizeComment(value: unknown, fallback: string | null): strin
   const comment = value.trim();
   if (comment.length > MAX_COMMENT_LENGTH) return null;
   return comment || null;
-}
-
-export function clampPlanYear(year: number, fallback: number): number {
-  if (!Number.isInteger(year)) return fallback;
-  return Math.min(MAX_YEAR, Math.max(MIN_YEAR, year));
 }
 
 export function isNonNegativeInteger(value: unknown): value is number {

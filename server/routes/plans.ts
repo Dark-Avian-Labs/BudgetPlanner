@@ -2,17 +2,17 @@ import { randomUUID } from 'crypto';
 
 import { Router, type Request, type Response } from 'express';
 
+import { isAccountColor, nextAccountColor } from '../../shared/accountColors.js';
+import { computeMonthTotals } from '../../shared/dueThisMonth.js';
+import { calendarMonth, clampPlanMonth } from '../../shared/planMonth.js';
 import type { EntryFrequency, EntryKind, MemberRole } from '../db/appSchema.js';
 import { getAppDb } from '../db/connection.js';
-import { isAccountColor, nextAccountColor } from '../lib/accountColors.js';
-import { computeMonthTotals } from '../lib/dueThisMonth.js';
 import {
   ENTRY_SELECT,
   listPlanEntries,
   syncOnceArchiveState,
   type PlanEntryRow,
 } from '../lib/planEntries.js';
-import { calendarMonth, clampPlanMonth } from '../lib/planMonth.js';
 import {
   invalidFieldsBody,
   isNonNegativeInteger,

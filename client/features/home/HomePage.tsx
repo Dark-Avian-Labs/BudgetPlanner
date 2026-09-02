@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 
-import { CURRENCIES } from '../../app/config';
+import { CURRENCIES } from '../../../shared/currencies';
 import { planPath } from '../../app/paths';
 import { RequireAuth } from '../../components/Layout/Layout';
 import { Button } from '../../components/ui/Button';

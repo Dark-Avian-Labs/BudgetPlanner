@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
 
 import { SelectDropdown, type SelectDropdownOption } from './SelectDropdown';
 
@@ -27,7 +27,6 @@ export function FormSelect({
   placement = 'floating',
 }: FormSelectProps) {
   const id = useId();
-  const [open, setOpen] = useState(false);
 
   return (
     <div className={`form-group ${className ?? ''}`}>
@@ -37,8 +36,6 @@ export function FormSelect({
         value={value}
         options={options}
         onChange={onChange}
-        open={open}
-        onOpenChange={setOpen}
         placeholder={placeholder}
         buttonAriaLabel={label}
         disabled={disabled}
