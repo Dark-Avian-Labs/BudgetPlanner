@@ -35,3 +35,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.5.3** `chore(deps)` [#32](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/32): bump @dotenvx/dotenvx in the production-dependencies group
 - **v1.5.4** `chore` [#34](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/34): fix/clear acrylic control radius
 - **v1.6.0** `chore` [#35](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/35): feat/rarity colors and user menu
+- **v1.6.1** `chore(deps)` [#36](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/36): bump @clerk/express in the production-dependencies group
