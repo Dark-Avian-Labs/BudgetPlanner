@@ -37,3 +37,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.6.0** `chore` [#35](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/35): feat/rarity colors and user menu
 - **v1.6.1** `chore(deps)` [#36](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/36): bump @clerk/express in the production-dependencies group
 - **v1.6.2** `ci` [#40](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/40): right-size remaining runners
+- **v1.6.3** `chore` [#39](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/39): ci/rightsize selected runners
