@@ -39,3 +39,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.6.2** `ci` [#40](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/40): right-size remaining runners
 - **v1.6.3** `chore` [#39](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/39): ci/rightsize selected runners
 - **v1.6.4** `ci` [#41](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/41): run Node jobs on 2 vCPU
+- **v1.6.5** `ci(deps)` [#42](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/42): bump the github-actions group with 2 updates
