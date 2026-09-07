@@ -37,6 +37,6 @@ Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a
 
 ## Toolchain
 
-Node **26+**, pnpm **11.x**, exact `packageManager`. Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`. `pnpm dev` decrypts `.env.development` with dotenvx (`--strict`) before spawning Vite and the API. `pnpm run validate` is the quality gate.
+Node **26+**, pnpm **12.x**, exact `packageManager`. Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`. `pnpm dev` decrypts `.env.development` with dotenvx (`--strict`) before spawning Vite and the API. `pnpm run validate` is the quality gate.
 
 On Windows, Cursor agent shells may prepend bundled Node 22. After changing Node versions, run `pnpm rebuild better-sqlite3`.

@@ -3,7 +3,4 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 overrides:
-  js-cookie: ^3.0.7
-  undici: ^7.24.4
-  ip-address: ^10.2.0
-  tar: '>=7.5.11'
+  undici: ^8.10.2

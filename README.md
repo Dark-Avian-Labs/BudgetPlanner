@@ -26,7 +26,7 @@ BudgetPlanner is a mobile-first household budget app for shared recurring expens
 ## Requirements
 
 - Node.js 26+
-- pnpm 11+
+- pnpm 12+
 
 ## Quick start
 
