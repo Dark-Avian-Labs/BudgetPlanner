@@ -132,7 +132,7 @@ Client `VITE_*` variables are listed in `.env.example`.
 | Script                  | Description                                                                        |
 | ----------------------- | ---------------------------------------------------------------------------------- |
 | `pnpm run validate`     | Runtime preflight (Node 26+, pnpm, SQLite native), format, lint, typecheck, tests. |
-| `pnpm dev`              | Vite + watched Express (via dotenvx).                                              |
+| `pnpm dev`              | Vite + watched Express (dotenvx `--strict`).                                       |
 | `pnpm run build`        | Typecheck, compile server, and Vite client build.                                  |
 | `pnpm start`            | Run production server from `dist/` (loads dotenvx in-process).                     |
 | `pnpm run typecheck`    | Typecheck server and client.                                                       |

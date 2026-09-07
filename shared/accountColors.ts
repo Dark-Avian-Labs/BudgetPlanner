@@ -13,7 +13,6 @@ export type AccountColor = (typeof ACCOUNT_COLORS)[number];
 
 export const DEFAULT_ACCOUNT_COLOR: AccountColor = 'blue';
 
-/** Old picker names → closest rarity hue. Sky and indigo both sit nearer blue than teal/purple. */
 const LEGACY_ACCOUNT_COLORS: Record<string, AccountColor> = {
   rose: 'red',
   amber: 'gold',
