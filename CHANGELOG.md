@@ -42,3 +42,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.6.5** `ci(deps)` [#42](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/42): bump the github-actions group with 2 updates
 - **v1.6.6** `chore` [#45](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/45): fix/theme chrome consistency
 - **v1.6.7** `chore` [#46](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/46): ci/pnpm 12 setup
+- **v1.6.8** `ci(deps)` [#47](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/47): bump iShark5060/actions-discord-status
