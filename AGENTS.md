@@ -8,7 +8,7 @@ Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, val
 
 BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Clerk is identity only. Plan membership, invites, and roles live in app SQLite (`plan_members`); this is not Clerk Organizations.
 
-Default listen port in code is **3001**. `.env.example` and the Vite proxy default to **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
+Default listen port in code is **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
 
 ## Money and plans
 
@@ -31,7 +31,7 @@ Two SQLite files. Do not point them at the same path, and do not reuse Armory or
 
 ## Auth
 
-Clerk keys are required for auth routes; without them those routes return **503** (the server still starts). That differs from Armory/Codex, where placeholder keys 500 every request. Leave keys empty or fill real ones; do not copy placeholder keys from those apps. CSRF tokens rotate when the Clerk user id on the express session changes (`server/session/bindClerkUserSession.ts`).
+Clerk keys are required for auth routes; without them those routes return **503** (the server still starts). Empty keys skip `clerkMiddleware`: `isClerkConfigured()` is false and every request is treated as unsigned. Placeholder keys (`pk_test_placeholder` / `sk_test_placeholder`) and bare `pk_test_` / `sk_test_` prefixes are **FATAL** at `isClerkConfigured()` — leave both keys empty instead of faking values. Do not copy placeholder keys from Armory or Codex. CSRF tokens rotate when the Clerk user id on the express session changes (`server/session/bindClerkUserSession.ts`). Playwright runs unsigned (empty keys); auth routes stay 503.
 
 Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a login. `APP_PUBLIC_BASE_URL` is required when Clerk is configured; `ALLOWED_APP_ORIGINS` lists sibling apps for Clerk `authorizedParties`. Keep `VITE_*` plaintext; encrypting them garbles unwrapped `vite` / `vite build`. `pnpm run build` decrypts `.env.production` first. If you add app roles later, configure the Clerk session token with `"metadata": "{{user.public_metadata}}"` (`apps.budgetplanner`).
 
@@ -40,3 +40,13 @@ Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a
 Node **26+**, pnpm **12.x**, exact `packageManager`. Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`. `pnpm dev` decrypts `.env.development` with dotenvx (`--strict`) before spawning Vite and the API. `pnpm run validate` is the quality gate.
 
 On Windows, Cursor agent shells may prepend bundled Node 22. After changing Node versions, run `pnpm rebuild better-sqlite3`.
+
+## Tests
+
+`pnpm run validate` is the quality gate: preflight, oxfmt, oxlint, typecheck, Vitest. In CI that Vitest step is instrumented (`pnpm run test:coverage`); locally `pnpm test` stays uninstrumented. Use `pnpm run test:watch` while iterating.
+
+HTTP tests that need the real stack (health, CSRF, Helmet, `/api/version`) go through `createApp()` in `server/app.ts`. `server/index.ts` only ensures data dirs, then `createApp()`, listen, and shutdown. `createApp` applies session and app schema, including injected `:memory:` databases.
+
+Vitest is Node-only (`*.test.ts` under server, client, and shared). Coverage includes `server/`, `shared/`, and `client/utils/`. There is no happy-dom client suite.
+
+Playwright (`pnpm run test:e2e`) is **not** inside validate. It boots the compiled server (`dist/server/index.js`) on port **3103** with throwaway sqlite files after `pnpm run build` (dotenvx decrypts `.env.production`). Smokes cover probes, CSRF, API 404, and SPA `GET /` **200**. Run `pnpm run test:e2e:install` once per machine.

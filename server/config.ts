@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 
 import { config as loadEnv } from '@dotenvx/dotenvx';
 
+import { isClerkConfigured } from './auth/middleware.js';
+
 function resolveEnvFilePath(projectRoot: string): string | null {
   const normalizedNodeEnv = (process.env.NODE_ENV ?? '').trim().toLowerCase();
 
@@ -134,7 +136,7 @@ if (NODE_ENV === 'production') {
 
 export const CLERK_PUBLISHABLE_KEY = clerkPublishable;
 export const CLERK_SECRET_KEY = clerkSecret;
-export const CLERK_CONFIGURED = Boolean(CLERK_PUBLISHABLE_KEY && CLERK_SECRET_KEY);
+export const CLERK_CONFIGURED = isClerkConfigured();
 
 export const LEGAL_PAGE_URL =
   process.env.LEGAL_PAGE_URL?.trim() ||
