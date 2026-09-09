@@ -1,155 +1,32 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Dark-Avian-Labs/.github/refs/heads/main/banner.png" alt="Dark Avian Labs">
+</p>
+
 # BudgetPlanner
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/ci.yml)
-[![PR](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/pr.yml/badge.svg)](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/pr.yml)
-![Node](https://img.shields.io/badge/Node-%3E%3D26-339933?logo=node.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178C6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?logo=tailwindcss&logoColor=white)
-[![Cursor](https://img.shields.io/badge/Cursor-IDE-141414?logo=cursor&logoColor=white)](https://cursor.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/Dark-Avian-Labs/BudgetPlanner/ci.yml?style=flat-square&label=CI)](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/ci.yml)
+[![PR](https://img.shields.io/github/actions/workflow/status/Dark-Avian-Labs/BudgetPlanner/pr.yml?style=flat-square&label=PR)](https://github.com/Dark-Avian-Labs/BudgetPlanner/actions/workflows/pr.yml)
+![Node](https://img.shields.io/badge/Node-%3E%3D26-339933?logo=node.js&logoColor=white&style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178C6?logo=typescript&logoColor=white&style=flat-square)
+![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black&style=flat-square)
+![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white&style=flat-square)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?logo=tailwindcss&logoColor=white&style=flat-square)
+[![Cursor](https://img.shields.io/badge/Cursor-IDE-141414?logo=cursor&logoColor=white&style=flat-square)](https://cursor.com)
 
-BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Invite someone by email with view or edit access. This-month totals only count what is due in the current calendar month. Sign-in uses [Clerk](https://clerk.com). English is the default locale, with German ready to go.
+Shared household budget for recurring expenses, income, and credits. Invite by email (view or edit). This-month totals only count what is due in the current calendar month. English default, German ready. Sign-in uses [Clerk](https://clerk.com). Plan membership lives in app SQLite, not Clerk Organizations.
 
-## Features
+Live: [budget.darkavianlabs.com](https://budget.darkavianlabs.com)
 
-- Plans with categories, accounts, and entries (expense / income / credit)
-- Monthly / quarterly / yearly cadence
-- **This month** totals (only entries due in the current calendar month)
-- Credit end date + final installment amount
-- Details sheet → edit form; Organize mode for reordering
-- Invite by email (view or edit) via copy-link + mailto
-- Set invited plan as default
-- i18next (`en` default, `de` ready)
+Default API port is **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. Vite is **5173**.
 
-## Requirements
+## Gotchas
 
-- Node.js 26+
-- pnpm 12+
-
-## Quick start
-
-1. Install Node.js and pnpm using your preferred method for your OS.
-
-2. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Decrypt the committed env files (see [dotenvx](#dotenvx-and-encrypted-env-files)), or copy `.env.example` and fill in Clerk keys:
-
-   ```bash
-   cp .env.example .env.development
-   ```
-
-4. Run in development (Vite HMR + watched API server):
-
-   ```bash
-   pnpm dev
-   ```
-
-   Open `http://127.0.0.1:5173`. API requests are proxied to the Express server (`VITE_DEV_API_TARGET`, default `http://127.0.0.1:3002`).
-
-5. Build and run production:
-
-   ```bash
-   pnpm run build
-   pnpm start
-   ```
-
-In the Clerk dashboard (dev instance), allow `http://localhost:5173` (and sign-in/up paths). Production: allow `https://budget.darkavianlabs.com` on the DAL production instance.
-
-## Examples
-
-```bash
-curl -sS http://127.0.0.1:3002/api/health
-curl -sS http://127.0.0.1:3002/healthz
-curl -sS http://127.0.0.1:3002/readyz
-```
-
-## dotenvx and encrypted env files
-
-Encrypted `.env.development` and `.env.production` are committed. Decrypt locally with the private key(s) in `.env.keys` (gitignored). If you don't have `.env.keys` yet, get the `DOTENV_PRIVATE_KEY_*` values from a teammate / password manager, then either write `.env.keys` or export them for the session:
-
-```bash
-# Windows PowerShell: $env:DOTENV_PRIVATE_KEY_DEVELOPMENT="..."
-# bash: export DOTENV_PRIVATE_KEY_DEVELOPMENT=...
-```
-
-Create or rotate secrets:
-
-```bash
-pnpm run env:set:dev KEY value      # encrypts into .env.development
-pnpm run env:set:prod KEY value     # encrypts into .env.production
-# or decrypt → edit → re-encrypt:
-pnpm run env:decrypt
-# edit .env.development / .env.production
-pnpm run env:encrypt
-```
-
-Clerk keys: development (`pk_test_` / `sk_test_`) in `.env.development`, live keys in `.env.production`.
-
-Production/CI: set `DOTENV_PRIVATE_KEY_PRODUCTION` on the host (do **not** deploy `.env.keys` unless you manage it carefully on the server). Store private keys in your secrets manager the same way you would an SSH deploy key.
-
-Suggested secret naming:
-
-- `DOTENV_PRIVATE_KEY_DEVELOPMENT`
-- `DOTENV_PRIVATE_KEY_PRODUCTION`
-
-Use one key per environment to reduce blast radius.
-
-## Environment
-
-| Variable                                | Description                                                                           |
-| --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `PORT`, `HOST`                          | Server bind address (defaults: `3001`, `127.0.0.1`). `.env.example` uses `PORT=3002`. |
-| `NODE_ENV`                              | Typically `development`, `test`, or `production`.                                     |
-| `APP_NAME`, `APP_ID`                    | Display name and app id (session cookie prefix).                                      |
-| `SESSION_SECRET`                        | Required in production; the server refuses to start with the default secret.          |
-| `SESSION_COOKIE_NAME`                   | Session cookie key (defaults to `<APP_ID>.sid`).                                      |
-| `TRUST_PROXY`, `SECURE_COOKIES`         | Reverse proxy and HTTPS-only cookie behavior.                                         |
-| `COOKIE_DOMAIN`                         | Optional shared cookie domain.                                                        |
-| `APP_PUBLIC_BASE_URL`                   | Public origin; required when Clerk is enabled (authorized parties).                   |
-| `ALLOWED_APP_ORIGINS`                   | Extra Clerk authorized-party origins (comma-separated sibling apps).                  |
-| `SESSION_DB_PATH`                       | SQLite session store location (default `./data/sessions.db`).                         |
-| `APP_DB_PATH`                           | App SQLite path (default `./data/app.db`).                                            |
-| `CLERK_SECRET_KEY`                      | **Required in production.** Clerk secret key for server-side session verification.    |
-| `CLERK_PUBLISHABLE_KEY`                 | Clerk publishable key for the server (falls back to `VITE_CLERK_PUBLISHABLE_KEY`).    |
-| `VITE_CLERK_PUBLISHABLE_KEY`            | Clerk publishable key for the client.                                                 |
-| `VITE_DEV_API_TARGET`                   | Vite dev proxy target for `/api` (default `http://127.0.0.1:3002`).                   |
-| `VITE_DEV_PORT`                         | Vite dev server port (default `5173`).                                                |
-| `VITE_BASE_PATH`                        | Optional Vite base path for nested deployments.                                       |
-| `VITE_APP_NAME`                         | App title shown in the shell.                                                         |
-| `VITE_LEGAL_ENTITY_NAME`                | Footer legal name.                                                                    |
-| `VITE_LEGAL_PAGE_URL`, `LEGAL_PAGE_URL` | Legal page redirect target.                                                           |
-
-Client `VITE_*` variables are listed in `.env.example`.
-
-## Scripts
-
-| Script                  | Description                                                                        |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| `pnpm run validate`     | Runtime preflight (Node 26+, pnpm, SQLite native), format, lint, typecheck, tests. |
-| `pnpm dev`              | Vite + watched Express (dotenvx `--strict`).                                       |
-| `pnpm run build`        | Typecheck, compile server, and Vite client build.                                  |
-| `pnpm start`            | Run production server from `dist/` (loads dotenvx in-process).                     |
-| `pnpm run typecheck`    | Typecheck server and client.                                                       |
-| `pnpm run lint`         | Run Oxlint.                                                                        |
-| `pnpm run lint:fix`     | Run Oxlint with `--fix`.                                                           |
-| `pnpm run format`       | Run Oxfmt.                                                                         |
-| `pnpm run check-format` | Verify Oxfmt formatting.                                                           |
-| `pnpm run test`         | Run Vitest once.                                                                   |
-| `pnpm run test:watch`   | Run Vitest in watch mode.                                                          |
-| `pnpm run env:encrypt`  | Encrypt `.env.development` + `.env.production`.                                    |
-| `pnpm run env:decrypt`  | Decrypt both for local editing.                                                    |
-| `pnpm run env:set:dev`  | Set an encrypted key in `.env.development`.                                        |
-| `pnpm run env:set:prod` | Set an encrypted key in `.env.production`.                                         |
-
-## Development
-
-Design system: AppBase `AGENTS.md`. Org standards: AppBase `docs/org-standards/`.
+- Encrypted `.env.development` / `.env.production` are committed. Decrypt with `.env.keys` or `DOTENV_PRIVATE_KEY_*`. Never encrypt `VITE_*`. Do not copy Armory/Codex placeholder Clerk keys — they are fatal here too.
+- Without Clerk keys the server still starts, but auth routes return **503**. Production needs real keys, `APP_PUBLIC_BASE_URL`, and `COOKIE_DOMAIN=.darkavianlabs.com` to share login with the other DAL apps. Allow `http://localhost:5173` on the Clerk dev instance.
+- `APP_DB_PATH` and `SESSION_DB_PATH` must be different files. Do not reuse Armory or Codex SQLite.
+- Invite accept requires the signed-in Clerk email to match the invite (case-insensitive). Mismatch is 403. The owner cannot leave a plan; they delete it.
+- After changing Node versions on Windows, `pnpm rebuild better-sqlite3`.
 
 ## License
 
