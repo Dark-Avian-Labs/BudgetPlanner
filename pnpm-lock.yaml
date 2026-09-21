@@ -128,8 +128,8 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.3.0)
       '@dotenvx/dotenvx':
-        specifier: ^2.28.0
-        version: 2.28.0
+        specifier: ^2.28.1
+        version: 2.28.1
       '@fontsource-variable/cascadia-mono':
         specifier: ^5.3.0
         version: 5.3.0
@@ -359,8 +359,8 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  '@dotenvx/dotenvx@2.28.0':
-    resolution: {integrity: sha512-NBG5qBkNp5ZYlPsTzB5Zjk5y7dstE94MrlrWpJex22YtGOgcFb41WQ8PzLtjiEBlf98TOO4nr1n/PsEXAFYo9g==}
+  '@dotenvx/dotenvx@2.28.1':
+    resolution: {integrity: sha512-/oY5hqUamvCeQ7e7NT1p8L0ykXVelkvpFgk027G/KLTc+7fYCWedo4OT3Qq5YPSzPD43JRi9G+IDbaQOhvfNhA==}
     hasBin: true
 
   '@dotenvx/primitives@3.0.2':
@@ -3474,7 +3474,7 @@ snapshots:
       react: 19.3.0
       tslib: 2.8.1
 
-  '@dotenvx/dotenvx@2.28.0':
+  '@dotenvx/dotenvx@2.28.1':
     dependencies:
       '@dotenvx/primitives': 3.0.2
       '@dotenvx/tooling': 1.0.3
