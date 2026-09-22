@@ -38,6 +38,11 @@ export const APP_VERSION = readTrimmedEnv(
   'dev',
 );
 
+export const APP_ID = readTrimmedEnv(
+  import.meta.env.VITE_APP_ID as string | undefined,
+  'budgetplanner',
+).toLowerCase();
+
 export const LEGAL_ENTITY_NAME = readTrimmedEnv(
   import.meta.env.VITE_LEGAL_ENTITY_NAME as string | undefined,
   'Dark Avian Labs',
