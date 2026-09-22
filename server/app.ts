@@ -5,7 +5,7 @@ import { getAuth } from '@clerk/express';
 import type Database from 'better-sqlite3';
 import cookieParser from 'cookie-parser';
 import { csrfSync } from 'csrf-sync';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import session from 'express-session';
 
@@ -44,6 +44,7 @@ export interface CreateAppOptions {
   sessionDb?: Database.Database;
   appDb?: Database.Database;
   sessionCleanupIntervalMs?: number;
+  metricsMiddleware?: RequestHandler;
 }
 
 export function createApp(options: CreateAppOptions = {}): AppBundle {
@@ -62,6 +63,9 @@ export function createApp(options: CreateAppOptions = {}): AppBundle {
   }
 
   app.use(createAppHelmet({ hsts: NODE_ENV === 'production' }));
+  if (options.metricsMiddleware) {
+    app.use(options.metricsMiddleware);
+  }
 
   app.use(express.json({ limit: '64kb' }));
   app.use(express.urlencoded({ extended: true, limit: '64kb' }));
