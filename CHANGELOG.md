@@ -52,3 +52,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.6.15** `ci(deps)` [#63](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/63): bump useblacksmith/checkout in the github-actions group
 - **v1.7.0** `chore` [#64](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/64): feat/sentinel agent
 - **v1.8.0** `chore` [#66](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/66): feat/dal app nav v2
+- **v1.8.1** `chore` [#67](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/67): fix/dal app nav proxy
