@@ -50,3 +50,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.6.13** `chore(deps)` [#58](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/58): bump @dotenvx/dotenvx in the production-dependencies group
 - **v1.6.14** `chore` [#62](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/62): chore/deps dotenvx pnpm
 - **v1.6.15** `ci(deps)` [#63](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/63): bump useblacksmith/checkout in the github-actions group
+- **v1.7.0** `chore` [#64](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/64): feat/sentinel agent
