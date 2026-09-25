@@ -31,8 +31,8 @@
     "db:backup": "node scripts/backup-app-db.mjs"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.69",
-    "@clerk/react": "^6.16.1",
+    "@clerk/express": "^2.1.70",
+    "@clerk/react": "^6.17.0",
     "@dark-avian-labs/sentinel-agent": "https://github.com/Dark-Avian-Labs/Sentinel/releases/download/agent-v0.1.0/dark-avian-labs-sentinel-agent-0.1.0.tgz",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
