@@ -1,5 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 
+import { log } from '../logger.js';
+import { getRequestId } from './requestId.js';
+
 type HttpishError = {
   statusCode?: unknown;
   status?: unknown;
@@ -24,12 +27,7 @@ function isCsrfError(err: HttpishError): boolean {
   );
 }
 
-export function errorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
   const maybe = err as HttpishError;
 
   if (isCsrfError(maybe)) {
@@ -47,8 +45,13 @@ export function errorHandler(
   const status =
     statusFromError && statusFromError >= 400 && statusFromError < 600 ? statusFromError : 500;
 
-  const logged = err instanceof Error ? (err.stack ?? err.message) : String(err);
-  console.error('[Error]', logged);
+  log('error', 'request_failed', {
+    requestId: getRequestId(res),
+    method: req.method,
+    path: req.originalUrl,
+    status,
+    error: err instanceof Error ? (err.stack ?? err.message) : String(err),
+  });
 
   const expose = maybe.expose === true && err instanceof Error && status < 500;
   const message = expose

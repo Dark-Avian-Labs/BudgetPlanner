@@ -154,6 +154,9 @@
     "signInSubtitle": "Sign in to manage your household budget.",
     "signUpTitle": "Create account",
     "signUpSubtitle": "Create an account to start planning together.",
-    "clerkMissing": "Add your Clerk publishable key to .env to enable sign-in."
+    "clerkMissing": "Add your Clerk publishable key to .env to enable sign-in.",
+    "checkingSession": "Checking session...",
+    "sessionErrorTitle": "Could not verify your session",
+    "sessionErrorHint": "The server did not answer. Retry, or sign in again if this keeps happening."
   }
 }

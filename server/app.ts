@@ -31,6 +31,8 @@ import { SqliteSessionStore } from './db/sqliteSessionStore.js';
 import { handleDalAppNavProxy } from './http/dalAppNavProxy.js';
 import { errorHandler } from './http/errorHandler.js';
 import { createAppHelmet } from './http/helmetCsp.js';
+import { getRequestId, requestIdMiddleware } from './http/requestId.js';
+import { log } from './logger.js';
 import { apiRouter } from './routes/api.js';
 import { bindClerkUserSessionMiddleware } from './session/bindClerkUserSession.js';
 
@@ -64,6 +66,7 @@ export function createApp(options: CreateAppOptions = {}): AppBundle {
   }
 
   app.use(createAppHelmet({ hsts: NODE_ENV === 'production' }));
+  app.use(requestIdMiddleware);
   if (options.metricsMiddleware) {
     app.use(options.metricsMiddleware);
   }
@@ -153,6 +156,22 @@ export function createApp(options: CreateAppOptions = {}): AppBundle {
 
   app.use(csrfSynchronisedProtection);
   app.locals.generateCsrfToken = generateToken;
+  app.use('/api', (req, res, next) => {
+    const startedAt = Date.now();
+    res.on('finish', () => {
+      const status = res.statusCode;
+      if (status < 400) return;
+      log(status >= 500 ? 'error' : 'warn', 'api_request', {
+        requestId: getRequestId(res),
+        method: req.method,
+        path: req.originalUrl,
+        status,
+        durationMs: Date.now() - startedAt,
+      });
+    });
+    next();
+  });
+
   app.use(
     '/api',
     bindClerkUserSessionMiddleware(

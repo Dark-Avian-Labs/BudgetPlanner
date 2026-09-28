@@ -1,8 +1,9 @@
-import { Show, useAuth, useClerk } from '@clerk/react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useAuth, useClerk } from '@clerk/react';
+import { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet } from 'react-router';
 
+import feathers from '../../../assets/feathers.png';
 import {
   APP_DISPLAY_NAME,
   APP_ID,
@@ -13,15 +14,14 @@ import {
 } from '../../app/config';
 import { APP_PATHS } from '../../app/paths';
 import { buildClerkProfileAppearance } from '../../clerk';
+import { ChunkErrorBoundary } from '../../components/ui/ChunkErrorBoundary';
 import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Menu } from '../../components/ui/Menu';
 import { UiStyleSelector } from '../../components/ui/UiStyleSelector';
 import { useRovingMenu } from '../../components/ui/useRovingMenu';
 import { useTheme } from '../../context/ThemeContext';
-import { buildAuthPagePath, safeAuthRedirectPath } from '../../features/auth/authRedirect';
 import { bindLocaleOwner, syncLocaleFromServer } from '../../lib/locale';
-import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
 import { DalAppNav } from './DalAppNav';
 import { HexSideBackground } from './HexSideBackground';
@@ -29,14 +29,7 @@ import { PlanSwitcher } from './PlanSwitcher';
 import { StaleClientUpdateBanner } from './StaleClientUpdateBanner';
 
 function ClerkTokenBridge() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
-
-  useEffect(() => {
-    setClerkTokenGetter((options) => getToken(options));
-    return () => {
-      setClerkTokenGetter(null);
-    };
-  }, [getToken]);
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -102,7 +95,7 @@ function ClerkSessionMenu({ onClose }: { onClose: () => void }) {
         onClick={() => {
           onClose();
           bindLocaleOwner(null);
-          void clerk.signOut({ redirectUrl: '/' });
+          void clerk.signOut({ redirectUrl: APP_PATHS.home });
         }}
       >
         {t('app.logout')}
@@ -131,11 +124,24 @@ export function Layout() {
       <DalAppNav currentAppId={APP_ID} />
       <header className="no-print relative z-30 px-4 pt-4 pb-2 sm:px-6">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between gap-3">
-          <Link to={APP_PATHS.home} className="brand-lockup w-fit min-w-0">
-            <span className="brand-lockup__title brand-lockup--fx truncate text-lg sm:text-xl">
-              {APP_DISPLAY_NAME}
+          <div className="flex min-w-0 items-center gap-2">
+            <Link to={APP_PATHS.home} className="brand-lockup w-fit min-w-0">
+              <img
+                src={feathers}
+                alt="Dark Avian Labs feather mark"
+                className="brand-lockup__icon"
+              />
+              <span className="brand-lockup__title brand-lockup--fx truncate text-lg sm:text-xl">
+                {APP_DISPLAY_NAME}
+              </span>
+            </Link>
+            <span
+              className="text-muted shrink-0 font-mono text-[10px] leading-none tracking-wide opacity-70"
+              title={`Client ${APP_VERSION}`}
+            >
+              v{APP_VERSION}
             </span>
-          </Link>
+          </div>
 
           <div className="flex items-center justify-end gap-2">
             {clerkEnabled ? <PlanSwitcher /> : null}
@@ -187,7 +193,17 @@ export function Layout() {
       </header>
       <main id="main-content" className="relative z-0 flex-1 px-4 pb-24 sm:px-6">
         <div className="mx-auto w-full max-w-3xl">
-          <Outlet />
+          <ChunkErrorBoundary>
+            <Suspense
+              fallback={
+                <p className="text-muted py-6 text-sm" role="status">
+                  {t('app.loading')}
+                </p>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </ChunkErrorBoundary>
         </div>
       </main>
       <footer className="no-print relative z-10 flex h-12 items-center justify-center px-4">
@@ -204,47 +220,5 @@ export function Layout() {
       </footer>
       <StaleClientUpdateBanner appVersion={APP_VERSION} />
     </div>
-  );
-}
-
-export function RequireAuth({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
-  const location = useLocation();
-  const returnTo =
-    safeAuthRedirectPath(`${location.pathname}${location.search}${location.hash}`) ??
-    APP_PATHS.home;
-
-  if (!CLERK_PUBLISHABLE_KEY) {
-    return (
-      <div className="glass-surface p-6 text-sm">
-        <p>{t('auth.clerkMissing')}</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <Show when="signed-out" fallback={null}>
-        <div className="glass-panel mx-auto w-full max-w-lg p-8 text-center">
-          <h1 className="mb-3 text-2xl font-semibold tracking-tight">{t('auth.signInTitle')}</h1>
-          <p className="text-muted mb-6 text-sm leading-relaxed">{t('auth.signInSubtitle')}</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to={buildAuthPagePath(APP_PATHS.signUp, returnTo)}
-              className="btn btn-accent w-full sm:w-auto"
-            >
-              {t('auth.signUpTitle')}
-            </Link>
-            <Link
-              to={buildAuthPagePath(APP_PATHS.signIn, returnTo)}
-              className="btn btn-secondary w-full sm:w-auto"
-            >
-              {t('app.signIn')}
-            </Link>
-          </div>
-        </div>
-      </Show>
-      <Show when="signed-in">{children}</Show>
-    </>
   );
 }

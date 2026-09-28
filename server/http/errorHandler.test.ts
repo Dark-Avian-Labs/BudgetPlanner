@@ -7,6 +7,7 @@ function invoke(err: unknown): { statusCode: number; body: unknown; headers: Rec
   let statusCode = 0;
   let body: unknown;
   const res = {
+    locals: {},
     setHeader(name: string, value: string) {
       headers[name] = value;
     },
@@ -21,7 +22,7 @@ function invoke(err: unknown): { statusCode: number; body: unknown; headers: Rec
   };
   const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   try {
-    errorHandler(err, {} as never, res as never, () => {});
+    errorHandler(err, { method: 'GET', originalUrl: '/api/test' } as never, res as never, () => {});
   } finally {
     errorSpy.mockRestore();
   }

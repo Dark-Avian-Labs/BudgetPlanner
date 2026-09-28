@@ -97,8 +97,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       existing && existing.email === email ? existing : upsertUserFromClerk(auth.userId, email);
     next();
   } catch (err) {
-    console.error('[auth] Failed to sync user', err);
-    res.status(500).json({ error: 'Failed to sync user' });
+    next(err);
   }
 }
 

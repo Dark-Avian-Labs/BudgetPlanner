@@ -115,6 +115,12 @@ describe('auth endpoints (Clerk not configured in tests)', () => {
     const res = await request(bundle!.app).get('/api/me');
     expect(res.status).toBe(503);
   });
+
+  it('GET /api/auth/me responds 503 when Clerk is off and returns a request id', async () => {
+    const res = await request(bundle!.app).get('/api/auth/me');
+    expect(res.status).toBe(503);
+    expect(res.headers['x-request-id']).toMatch(/^[A-Za-z0-9-]{8,64}$/);
+  });
 });
 
 describe('API 404 handling', () => {
@@ -122,5 +128,6 @@ describe('API 404 handling', () => {
     const res = await request(bundle!.app).get('/api/nope');
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Not found');
+    expect(res.headers['x-request-id']).toMatch(/^[A-Za-z0-9-]{8,64}$/);
   });
 });
