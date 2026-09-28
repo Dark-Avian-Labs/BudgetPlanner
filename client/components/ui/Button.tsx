@@ -37,21 +37,22 @@ function composeClassName(variant: ButtonVariant, className?: string): string {
 }
 
 export function Button(props: ButtonProps | LinkButtonProps) {
-  const { children, variant = 'secondary', className } = props;
-  const classes = composeClassName(variant, className);
-
   if ('href' in props && props.href) {
-    const { href, ...anchorProps } = props;
+    const { href, variant = 'secondary', className, children, ...anchorProps } = props;
     return (
-      <a href={href} className={classes} {...anchorProps}>
+      <a href={href} {...anchorProps} className={composeClassName(variant, className)}>
         {children}
       </a>
     );
   }
 
-  const buttonProps = props as ButtonProps;
+  const { variant = 'secondary', className, children, type, ...buttonProps } = props as ButtonProps;
   return (
-    <button type="button" {...buttonProps} className={classes}>
+    <button
+      type={type ?? 'button'}
+      {...buttonProps}
+      className={composeClassName(variant, className)}
+    >
       {children}
     </button>
   );

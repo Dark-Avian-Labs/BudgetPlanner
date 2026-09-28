@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
   const envValue = (key: string, fallback = '') =>
     process.env[key]?.trim() || fileEnv[key]?.trim() || fallback;
 
-  const devApiTarget = envValue('VITE_DEV_API_TARGET', 'http://127.0.0.1:3002');
+  const devApiTarget = envValue('VITE_DEV_API_TARGET', 'http://127.0.0.1:3003');
   const base = envValue('VITE_BASE_PATH', '/');
   const devPort = Number.parseInt(envValue('VITE_DEV_PORT', '5173'), 10);
 

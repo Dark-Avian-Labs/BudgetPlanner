@@ -1,0 +1,1470 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BudgetPlanner - DAL Platform Consistency Audit (2026-09-28)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0f14;
+        --panel: #151923;
+        --line: #242a38;
+        --fg: #e6e9f0;
+        --muted: #9aa3b5;
+        --accent: #7c83ff;
+        --high: #ff5f6d;
+        --medium: #ffb547;
+        --low: #5cc8ff;
+        --info: #8b93a7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          15px/1.55 Inter,
+          system-ui,
+          Segoe UI,
+          sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 40px 0 12px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 6px;
+      }
+      h3 {
+        font-size: 16px;
+        margin: 0;
+        flex: 1;
+      }
+      p {
+        margin: 8px 0;
+      }
+      code {
+        font:
+          12.5px/1.5 'Geist Mono',
+          'Cascadia Mono',
+          Consolas,
+          monospace;
+        color: #cfd6ff;
+        word-break: break-word;
+      }
+      .sub {
+        color: var(--muted);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin: 20px 0;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .card .k {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .card .v {
+        font-size: 26px;
+        font-weight: 600;
+      }
+      .sev {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+        white-space: nowrap;
+      }
+      .sev-high {
+        color: var(--high);
+      }
+      .sev-medium {
+        color: var(--medium);
+      }
+      .sev-low {
+        color: var(--low);
+      }
+      .sev-info {
+        color: var(--info);
+      }
+      .toc {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        columns: 1;
+      }
+      .toc li {
+        padding: 4px 0;
+        border-bottom: 1px dashed var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .toc a {
+        color: var(--fg);
+        text-decoration: none;
+      }
+      .toc a:hover {
+        color: var(--accent);
+      }
+      .finding.is-done {
+        opacity: 0.5;
+      }
+      .finding.is-done h3::after {
+        content: 'Done';
+        margin-left: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .finding {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin: 14px 0;
+      }
+      .finding header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+        color: var(--muted);
+        font-size: 13px;
+        margin: 10px 0 6px;
+      }
+      .meta b {
+        color: var(--fg);
+        font-weight: 600;
+        margin-right: 4px;
+      }
+      .note {
+        background: #1b2030;
+        border-left: 3px solid var(--accent);
+        padding: 8px 12px;
+        border-radius: 6px;
+      }
+      .evidence ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+      }
+      .evidence li {
+        margin: 3px 0;
+      }
+      .fix {
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+        margin-top: 12px;
+      }
+      table.matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      table.matrix th,
+      table.matrix td {
+        border: 1px solid var(--line);
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      table.matrix thead th {
+        background: #1b2030;
+      }
+      table.matrix tbody th {
+        color: var(--muted);
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      table.matrix .me {
+        background: rgba(124, 131, 255, 0.12);
+      }
+      .pos li {
+        margin: 6px 0;
+      }
+      footer {
+        margin-top: 48px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      @media (max-width: 720px) {
+        .meta {
+          flex-direction: column;
+          gap: 4px;
+        }
+        table.matrix {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>BudgetPlanner &mdash; Dark Avian Labs platform consistency audit</h1>
+      <p class="sub">
+        Generated 2026-09-28. Scope: AppBase, Codex, BudgetPlanner, Outfitter, Armory, Sentinel. Focus: UI/UX
+        consistency, workflow similarity, error reporting; plus logic, performance and maintainability issues found
+        along the way.
+      </p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="k">Findings for BudgetPlanner</div>
+          <div class="v">22</div>
+        </div>
+        <div class="card">
+          <div class="k">High</div>
+          <div class="v" style="color: var(--high)">3</div>
+        </div>
+        <div class="card">
+          <div class="k">Medium</div>
+          <div class="v" style="color: var(--medium)">5</div>
+        </div>
+        <div class="card">
+          <div class="k">Low</div>
+          <div class="v" style="color: var(--low)">9</div>
+        </div>
+        <div class="card">
+          <div class="k">Info</div>
+          <div class="v" style="color: var(--info)">5</div>
+        </div>
+      </div>
+
+      <h2>How to read this report</h2>
+      <p>
+        Findings are numbered 1..N for this repository and ordered by severity. Each finding also carries a stable
+        <b>Ref</b> (P-xx for platform-wide issues, A-xx-nn for app-specific ones) that is identical in the reports
+        written to the other five repositories, so the same issue can be tracked across apps. The "Also affects" line
+        lists the sibling apps that share the finding and the severity it carries there. Evidence paths are relative to
+        the repository root; line numbers refer to the working tree on 2026-09-28.
+      </p>
+      <p>
+        Method: static review of the six working trees, a diff of every "mirrored by hand" file against AppBase
+        (component primitives, ThemeContext, theme-init.js, input.css token blocks, server error handlers, API clients),
+        and a read of each Layout, route table, auth context and server entry point. Nothing was executed against a
+        running instance; visual claims are inferred from code and are marked where confirmation in a browser would be
+        prudent.
+      </p>
+
+      <h2>Contents</h2>
+      <ol class="toc">
+        <li>
+          <a href="#f1"
+            >1. BudgetPlanner theme is stored under bp.* keys, so it never syncs with the rest of the platform</a
+          >
+          <span class="sev sev-high">High</span>
+        </li>
+        <li>
+          <a href="#f2">2. Clerk sign-in/up routes lack the /* wildcard and render outside Layout</a>
+          <span class="sev sev-high">High</span>
+        </li>
+        <li>
+          <a href="#f3"
+            >3. Error presentation has no platform convention: toast vs banner vs inline vs native dialogs</a
+          >
+          <span class="sev sev-high">High</span>
+        </li>
+        <li>
+          <a href="#f4">4. Sign-in gate UX differs in every app (redirect, inline page, modal button, none)</a>
+          <span class="sev sev-medium">Medium</span>
+        </li>
+        <li>
+          <a href="#f5"
+            >5. Two API-client lineages: /api/csrf vs /api/auth/csrf, and silent CSRF-token failure in the AppBase
+            lineage</a
+          >
+          <span class="sev sev-medium">Medium</span>
+        </li>
+        <li>
+          <a href="#f6">6. User menu lacks keyboard navigation and focus management in four apps</a>
+          <span class="sev sev-medium">Medium</span>
+        </li>
+        <li>
+          <a href="#f7">7. No catch-all 404 route; unknown URLs render an empty shell</a>
+          <span class="sev sev-medium">Medium</span>
+        </li>
+        <li>
+          <a href="#f8">8. Port assignments collide and the AGENTS.md port table is wrong</a>
+          <span class="sev sev-medium">Medium</span>
+        </li>
+        <li>
+          <a href="#f9"
+            >9. Button primitive leaks the variant prop to the DOM and loses its class on the anchor branch</a
+          >
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f10">10. Server error handler has no request id or structured logger</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f11"
+            >11. Structural drift from the template: ErrorBoundary path, RequireAuth in Layout, header lockup</a
+          >
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f12">12. Auth state model differs per app (status values, admin flag name, /api/auth/me body)</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f13">13. Skip link CSS shipped everywhere, rendered only in Codex and Armory</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f14">14. Legal page location and footer link behaviour differ</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f15">15. Sign-out landing page and sign-in path are inconsistent</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f16"
+            >16. Latent Modal bug: focus trap and Escape are never installed when a Modal mounts already open</a
+          >
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f17">17. Route-level Suspense sits above Layout; no chunk-load recovery outside Codex/Armory</a>
+          <span class="sev sev-low">Low</span>
+        </li>
+        <li>
+          <a href="#f18"
+            >18. Backend auth failure is silently treated as &quot;signed out&quot;; the auth error state is never
+            shown</a
+          >
+          <span class="sev sev-info">Info</span>
+        </li>
+        <li>
+          <a href="#f19">19. No shared typed API-error parsing; each app hand-rolls response.json() error extraction</a>
+          <span class="sev sev-info">Info</span>
+        </li>
+        <li>
+          <a href="#f20">20. Only BudgetPlanner is localised; the other five apps are hard-coded English</a>
+          <span class="sev sev-info">Info</span>
+        </li>
+        <li>
+          <a href="#f21">21. SelectDropdown has forked in four directions; improvements are not upstreamed</a>
+          <span class="sev sev-info">Info</span>
+        </li>
+        <li>
+          <a href="#f22">22. index.html metadata is minimal and inconsistent</a> <span class="sev sev-info">Info</span>
+        </li>
+      </ol>
+
+      <h2>Findings</h2>
+
+      <article class="finding is-done" id="f1">
+        <header>
+          <span class="num">1</span>
+          <h3>BudgetPlanner theme is stored under bp.* keys, so it never syncs with the rest of the platform</h3>
+          <span class="sev sev-high">High</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> A-BP-01</span>
+          <span><b>Category</b> Logic/Bug</span>
+          <span><b>Also affects</b> AppBase <em>(Low)</em></span>
+        </div>
+
+        <p>
+          <b>Impact.</b> The design system contract is that dal.theme.mode and dal.ui.style (cookie + localStorage,
+          optionally domain-scoped) carry color mode and UI style across every DAL app. BudgetPlanner renamed both to
+          bp.theme.mode / bp.ui.style in ThemeContext and theme-init.js. A user who picks Light + Acrylic in Codex opens
+          BudgetPlanner and gets Dark + Prism, and vice versa. VITE_SHARED_THEME_COOKIE_DOMAIN is honoured, so the app
+          writes a .darkavianlabs.com cookie under the wrong name.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/context/ThemeContext.tsx:34-40 SHARED_THEME_STORAGE_KEY = 'bp.theme.mode';
+                THEME_COOKIE = 'bp.theme.mode'; UI_STYLE_STORAGE_KEY = 'bp.ui.style'; UI_STYLE_COOKIE =
+                'bp.ui.style'</code
+              >
+            </li>
+            <li>
+              <code
+                >BudgetPlanner/public/theme-init.js:20,23,33,43,50 readCookie('bp.theme.mode') / localStorage
+                'bp.ui.style'</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Rename the four constants back to dal.* in client/context/ThemeContext.tsx and
+          public/theme-init.js (keep budgetplanner.theme.mode as the app-local fallback). Add a shared test to AppBase
+          that asserts the key names so this cannot regress in any mirror.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f2">
+        <header>
+          <span class="num">2</span>
+          <h3>Clerk sign-in/up routes lack the /* wildcard and render outside Layout</h3>
+          <span class="sev sev-high">High</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> A-BP-02</span>
+          <span><b>Category</b> Logic/Bug</span>
+          <span><b>Also affects</b> this app only</span>
+        </div>
+
+        <p>
+          <b>Impact.</b> SignInPage/SignUpPage use routing=&quot;path&quot; with path=&quot;/sign-in&quot;. Clerk pushes
+          sub-steps such as /sign-in/factor-one, /sign-in/factor-two and /sign-in/sso-callback. The routes are
+          registered as exact paths (no /*), and there is no 404 route, so MFA and OAuth users land on a blank page
+          mid-flow. AppBase AGENTS.md explicitly requires the wildcard. The routes are also mounted outside the Layout
+          element, so the sign-in screen has no header, DalAppNav or shell backgrounds, unlike every sibling.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/app/routes.tsx:47-48 &lt;Route path={APP_PATHS.signIn} element={&lt;SignInPage
+                /&gt;} /&gt; (outside &lt;Route element={&lt;Layout /&gt;}&gt;)</code
+              >
+            </li>
+            <li>
+              <code
+                >BudgetPlanner/client/features/auth/SignInPage.tsx:23-24 routing=&quot;path&quot;
+                path=&quot;/sign-in&quot;</code
+              >
+            </li>
+            <li>
+              <code>AppBase/AGENTS.md:24 &quot;Sign-in/up routes need /sign-in/* and /sign-up/* wildcards&quot;</code>
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Register <code>${APP_PATHS.signIn}/*</code> and
+          <code>${APP_PATHS.signUp}/*</code> inside the Layout route, as AppBase does.
+        </p>
+      </article>
+
+      <article class="finding" id="f3">
+        <header>
+          <span class="num">3</span>
+          <h3>Error presentation has no platform convention: toast vs banner vs inline vs native dialogs</h3>
+          <span class="sev sev-high">High</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-01</span>
+          <span><b>Category</b> Error reporting</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(High)</em>, Codex <em>(Medium)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(High)</em>, Sentinel <em>(Medium)</em></span
+          >
+        </div>
+        <p class="note">
+          <b>In BudgetPlanner:</b> No toast primitive or CSS at all; every outcome (save, invite, delete) is an inline
+          paragraph that stays on screen. Success feedback is missing entirely for most mutations.
+        </p>
+        <p>
+          <b>Impact.</b> The same failure (a save that returns 4xx/5xx) is shown five different ways across the
+          platform: a Toast pill, a LoadErrorBanner with Retry, a bare .error-msg div, inline text-danger text, an
+          arbitrary text-[var(--color-danger)] span, or a browser alert(). Users learn a different mental model in every
+          app, and error copy, placement and dismissal behaviour never match. This is the single largest coherence gap
+          the audit found.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >Toast component present: AppBase, Codex, Sentinel only. Missing: BudgetPlanner (no .toast-pill CSS
+                either), Outfitter (.toast-pill CSS exists but no component = dead CSS), Armory (custom
+                ModBuilderToasts; .toast-pill lacks [data-interactive] and .toast-dismiss).</code
+              >
+            </li>
+            <li>
+              <code
+                >Codex: LoadErrorBanner (.error, role=&quot;alert&quot;, Retry) used 11x; text-danger 11x; Toast.</code
+              >
+            </li>
+            <li><code>BudgetPlanner: inline text-danger 10x, no toast at all.</code></li>
+            <li>
+              <code
+                >Outfitter: text-[var(--color-danger)] 7x and text-danger 2x (two conventions in one app), no
+                toast.</code
+              >
+            </li>
+            <li>
+              <code
+                >Armory: text-danger 38x, .error-msg, text-red-300/90 (raw Tailwind palette), window.alert() 8x,
+                confirm() 2x.</code
+              >
+            </li>
+            <li><code>AppBase/Sentinel: .error-msg div only, no role.</code></li>
+            <li>
+              <code
+                >BudgetPlanner/client/features/plan/PlanPage.tsx, EntrySheet.tsx, InvitePage.tsx, HomePage.tsx: {error ?
+                &lt;p className=&quot;text-danger ...&quot;&gt;}</code
+              >
+            </li>
+            <li>
+              <code>BudgetPlanner/client/styles/input.css: no .toast-pill definition (all five siblings have it)</code>
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Pick one primitive per situation and put it in AppBase so every app mirrors it: Toast
+          (data-tone) for transient outcomes of a user action; an inline banner with Retry (Codex LoadErrorBanner is the
+          best existing candidate) for failed page loads; field-level text under the input for validation. Give both
+          role=&quot;alert&quot; for error tone. Remove alert()/confirm() and use Modal + btn-danger for destructive
+          confirmation (Codex ConfirmModal / BudgetPlanner delete modal already do this). Add the chosen components to
+          the AGENTS.md component contract table.
+        </p>
+      </article>
+
+      <article class="finding" id="f4">
+        <header>
+          <span class="num">4</span>
+          <h3>Sign-in gate UX differs in every app (redirect, inline page, modal button, none)</h3>
+          <span class="sev sev-medium">Medium</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-03</span>
+          <span><b>Category</b> Workflow</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Low)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(Medium)</em>, Sentinel <em>(Medium)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> Hitting a protected screen while signed out produces four different experiences: a hard
+          redirect to /sign-in that forgets where you were (AppBase, Outfitter, Sentinel); a full &quot;Sign in to use
+          Codex&quot; glass panel with return-to links (Codex); an inline card with a Clerk modal button
+          (BudgetPlanner); or nothing at all until a 401 fires a &quot;Session expired&quot; modal (Armory). Return-to
+          after login only works in Codex.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/components/Layout/Layout.tsx:209-235 RequireAuth: &lt;SignInButton
+                mode=&quot;modal&quot;&gt; inside glass-surface (modal flow, unlike the path-routed pages
+                elsewhere)</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Standardise on one gate: an inline glass card inside Layout (keeps shell, backgrounds
+          and nav) with Sign in / Create account actions and a return-to parameter, like Codex AccountRequiredPage. Ship
+          it in AppBase as ProtectedRoute's signed-out branch. Keep Armory's session-expired modal as the shared 401
+          handler.
+        </p>
+      </article>
+
+      <article class="finding" id="f5">
+        <header>
+          <span class="num">5</span>
+          <h3>
+            Two API-client lineages: /api/csrf vs /api/auth/csrf, and silent CSRF-token failure in the AppBase lineage
+          </h3>
+          <span class="sev sev-medium">Medium</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-04</span>
+          <span><b>Category</b> Error reporting</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Low)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(Low)</em>, Sentinel <em>(Medium)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> AppBase, BudgetPlanner, Outfitter and Sentinel share one utils/api.ts (cached string, endpoint
+          /api/csrf). Codex and Armory share another (generation counter, in-flight de-duplication, endpoint
+          /api/auth/csrf). In the AppBase lineage, when the token fetch fails getCsrfToken() returns &quot;&quot; and
+          the mutation is still sent without a token; the server answers 403 and the user sees a generic failure instead
+          of &quot;could not reach server&quot;. The AppBase lineage also has no in-flight de-dupe, so N concurrent
+          first mutations trigger N /api/csrf requests. The API path itself differs, so cross-app tooling and docs
+          cannot assume one contract.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/utils/api.ts:34-46 same silent-empty behaviour</code></li>
+            <li><code>BudgetPlanner/server/routes/api.ts:12 apiRouter.get('/csrf')</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Adopt the Codex/Armory client (de-dupe + throw on missing token) as the AppBase version
+          and mirror it. Pick one CSRF path (the AGENTS.md documents /api/csrf) and add a redirect or alias on the two
+          servers that differ.
+        </p>
+      </article>
+
+      <article class="finding" id="f6">
+        <header>
+          <span class="num">6</span>
+          <h3>User menu lacks keyboard navigation and focus management in four apps</h3>
+          <span class="sev sev-medium">Medium</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-07</span>
+          <span><b>Category</b> Accessibility</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Info)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(Info)</em>, Sentinel <em>(Medium)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> All six Layouts mark the header popup as role=&quot;menu&quot; with role=&quot;menuitem&quot;
+          children, which promises Arrow/Home/End navigation, focus on open and focus return on close. Only Codex and
+          Armory implement it. In AppBase, BudgetPlanner, Outfitter and Sentinel the menu opens without moving focus,
+          arrow keys do nothing, and closing does not return focus to the trigger.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/components/Layout/Layout.tsx:157-183</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Extract the roving-focus logic from Codex Layout (onMenuKeyDown + focus effects) into
+          the shared Menu component in AppBase and mirror it, so every app gets it for free.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f7">
+        <header>
+          <span class="num">7</span>
+          <h3>No catch-all 404 route; unknown URLs render an empty shell</h3>
+          <span class="sev sev-medium">Medium</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-08</span>
+          <span><b>Category</b> UI/UX</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Outfitter <em>(Medium)</em>, Armory <em>(Low)</em>, Sentinel
+            <em>(Medium)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> AppBase, BudgetPlanner, Outfitter and Sentinel define no path=&quot;*&quot; route. A mistyped
+          or stale URL shows header, footer and backgrounds with a blank main area and no message. Codex renders a
+          NotFoundPage inside Layout; Armory renders one but outside Layout (no header/nav/backgrounds), so even the two
+          apps that have a 404 do not look alike.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/app/routes.tsx:46-54</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Add a NotFoundPage to AppBase, register path=&quot;*&quot; inside the Layout route, and
+          mirror. Move Armory's 404 route under the Layout child.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f8">
+        <header>
+          <span class="num">8</span>
+          <h3>Port assignments collide and the AGENTS.md port table is wrong</h3>
+          <span class="sev sev-medium">Medium</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-17</span>
+          <span><b>Category</b> Docs</span>
+          <span><b>Also affects</b> AppBase <em>(Low)</em>, Armory <em>(Medium)</em></span>
+        </div>
+
+        <p>
+          <b>Impact.</b> BudgetPlanner and Armory both default to PORT 3002, so running them side by side without env
+          overrides fails. AppBase AGENTS.md states BudgetPlanner is 3001 (sharing with Codex); BudgetPlanner AGENTS.md
+          says 3002; code says 3002. Playwright ports (3100-3104) are fine.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/server/config.ts:102 process.env.PORT || '3002'</code></li>
+            <li><code>BudgetPlanner/AGENTS.md:11 &quot;Default listen port in code is 3002&quot;</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Assign BudgetPlanner 3003 (currently unused) or another free port, update both
+          AGENTS.md files and the README port tables, and add the full table to the org standards.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f9">
+        <header>
+          <span class="num">9</span>
+          <h3>Button primitive leaks the variant prop to the DOM and loses its class on the anchor branch</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> A-BP-03</span>
+          <span><b>Category</b> Logic/Bug</span>
+          <span><b>Also affects</b> this app only</span>
+        </div>
+
+        <p>
+          <b>Impact.</b> BudgetPlanner rewrote Button so that {...buttonProps} still contains variant, which is emitted
+          as a &lt;button variant=&quot;accent&quot;&gt; attribute on every button. On the href branch the raw props
+          (including className, possibly undefined) are spread after className={classes}, so an &lt;Button href&gt;
+          would lose the composed btn classes entirely. No current caller uses href, so that half is latent; the
+          attribute leak is live.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/components/ui/Button.tsx:39-55 vs
+                AppBase/client/components/ui/Button.tsx:39-58</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Restore the AppBase version, which destructures variant/className/children before
+          spreading.
+        </p>
+      </article>
+
+      <article class="finding" id="f10">
+        <header>
+          <span class="num">10</span>
+          <h3>Server error handler has no request id or structured logger</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> A-BP-04</span>
+          <span><b>Category</b> Error reporting</span>
+          <span><b>Also affects</b> this app only</span>
+        </div>
+
+        <p>
+          <b>Impact.</b> Every sibling logs request_failed with a requestId (server/http/requestId.ts + logger.ts) so a
+          user-reported failure can be correlated. BudgetPlanner has neither: errorHandler.ts uses console.error and the
+          response carries no id.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/server/http/errorHandler.ts:50-51 console.error('[Error]', logged)</code></li>
+            <li><code>BudgetPlanner/server/ has no http/requestId.ts or logger.ts</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Copy server/http/requestId.ts and server/logger.ts from AppBase and use them in
+          errorHandler.ts and the /api 4xx/5xx access log.
+        </p>
+      </article>
+
+      <article class="finding" id="f11">
+        <header>
+          <span class="num">11</span>
+          <h3>Structural drift from the template: ErrorBoundary path, RequireAuth in Layout, header lockup</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> A-BP-05</span>
+          <span><b>Category</b> Maintainability</span>
+          <span><b>Also affects</b> this app only</span>
+        </div>
+
+        <p>
+          <b>Impact.</b> ErrorBoundary lives at client/components/ErrorBoundary.tsx (siblings: components/ui/),
+          RequireAuth is defined inside Layout.tsx, the header drops the feather mark and version badge and uses
+          max-w-3xl/h-14. The mobile-first width is a documented product choice, but the missing brand mark and version
+          badge are not, and the file moves make cross-app diffs noisier.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/components/ErrorBoundary.tsx</code></li>
+            <li>
+              <code
+                >BudgetPlanner/client/components/Layout/Layout.tsx:137-143 brand-lockup without img; :209 export
+                function RequireAuth</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Keep the narrow content width; restore the brand-lockup icon and vX.Y.Z badge; move
+          ErrorBoundary and RequireAuth to the template paths. Document &quot;compact header&quot; as an allowed variant
+          in AppBase AGENTS.md.
+        </p>
+      </article>
+
+      <article class="finding" id="f12">
+        <header>
+          <span class="num">12</span>
+          <h3>Auth state model differs per app (status values, admin flag name, /api/auth/me body)</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-06</span>
+          <span><b>Category</b> Workflow</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Medium)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(Medium)</em>, Sentinel <em>(Medium)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> AppBase/Outfitter/Sentinel use status &quot;authenticated&quot; + isAdmin; Codex/Armory use
+          status &quot;ok&quot; + isCodexAdmin/isArmoryAdmin (+ apps[] in Codex); BudgetPlanner has no AuthContext. The
+          /api/auth/me response body also differs ({userId,isAdmin} vs {authenticated,userId,isCodexAdmin,apps}). Anyone
+          moving between codebases, or writing a shared component, must special-case every app. Codex/Armory also guard
+          against stale refresh responses with a generation counter; the AppBase lineage does not, so a fast
+          sign-out/sign-in can apply an out-of-order result.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/components/Layout/Layout.tsx:1 uses @clerk/react useAuth directly; no app
+                AuthContext</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Define one AuthState in AppBase ({ status: loading|authenticated|unauthenticated|error,
+          userId, isAdmin, apps? }) with the generation guard from Codex, and one /api/auth/me shape; mirror it.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f13">
+        <header>
+          <span class="num">13</span>
+          <h3>Skip link CSS shipped everywhere, rendered only in Codex and Armory</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-09</span>
+          <span><b>Category</b> Accessibility</span>
+          <span><b>Also affects</b> AppBase <em>(Low)</em>, Outfitter <em>(Low)</em>, Sentinel <em>(Low)</em></span>
+        </div>
+
+        <p>
+          <b>Impact.</b> All six input.css files define .skip-link, but only Codex and Armory render &lt;a
+          href=&quot;#main-content&quot; class=&quot;skip-link&quot;&gt; and give &lt;main&gt; an id. Keyboard users in
+          the other four apps have to tab through the DalAppNav rail, brand link, search and header controls on every
+          page.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/components/Layout/Layout.tsx:132-206</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Add the skip link and id=&quot;main-content&quot; to AppBase Layout (copy from Codex)
+          and mirror.
+        </p>
+      </article>
+
+      <article class="finding" id="f14">
+        <header>
+          <span class="num">14</span>
+          <h3>Legal page location and footer link behaviour differ</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-12</span>
+          <span><b>Category</b> UI/UX</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Low)</em>, Codex <em>(Low)</em>, Outfitter <em>(Low)</em>, Armory
+            <em>(Info)</em>, Sentinel <em>(Low)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> AppBase and Sentinel render an in-app LegalPage (router Link, same tab, LEGAL_CONTACT_* env).
+          Codex, BudgetPlanner, Outfitter and Armory link to an external https://darkavianlabs.com/legal/ in a new tab,
+          with three different invalid-URL fallbacks (/auth/legal, /legal, external). The footer therefore behaves
+          differently per app and the imprint content can drift between the in-app copies and the website.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/app/config.ts:56 fallback '/legal'</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Pick one (external is simpler: one source of truth) and make the footer component
+          identical everywhere; remove LegalPage + LEGAL_CONTACT_* from the template if going external.
+        </p>
+      </article>
+
+      <article class="finding" id="f15">
+        <header>
+          <span class="num">15</span>
+          <h3>Sign-out landing page and sign-in path are inconsistent</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-13</span>
+          <span><b>Category</b> Workflow</span>
+          <span><b>Also affects</b> Codex <em>(Low)</em>, Armory <em>(Low)</em></span>
+        </div>
+
+        <p>
+          <b>Impact.</b> Logout redirects to &quot;/&quot; (Codex, BudgetPlanner), APP_PATHS.home (Outfitter, Sentinel)
+          or &quot;/builder/builds&quot; (Armory). Armory also hard-codes &quot;/sign-in&quot; in two places instead of
+          APP_PATHS.signIn. Small, but it is exactly the kind of drift the mirror model is supposed to prevent.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/components/Layout/Layout.tsx:95</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Use APP_PATHS.home and APP_PATHS.signIn everywhere; add to the AGENTS.md checklist.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f16">
+        <header>
+          <span class="num">16</span>
+          <h3>Latent Modal bug: focus trap and Escape are never installed when a Modal mounts already open</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-14</span>
+          <span><b>Category</b> Logic/Bug</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Low)</em>, Codex <em>(Low)</em>, Outfitter <em>(Info)</em>, Sentinel
+            <em>(Low)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> The shared Modal renders null until a &quot;mounted&quot; state flips, but the
+          focus-trap/Escape effect depends only on [open]. If a Modal is mounted with open={true} on first render, the
+          effect runs while the dialog is not yet in the DOM and never re-runs, so Escape and Tab-trapping are missing
+          for that dialog. Today every caller in the affected apps keeps Modal mounted and toggles open, so it is
+          latent; Outfitter already fixed it ([open, mounted]) and the fix was not upstreamed.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/components/ui/Modal.tsx</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Change the dependency array to [open, mounted] in AppBase Modal (as Outfitter did) and
+          mirror to Codex, BudgetPlanner and Sentinel.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f17">
+        <header>
+          <span class="num">17</span>
+          <h3>Route-level Suspense sits above Layout; no chunk-load recovery outside Codex/Armory</h3>
+          <span class="sev sev-low">Low</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-16</span>
+          <span><b>Category</b> UI/UX</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Low)</em>, Codex <em>(Info)</em>, Outfitter <em>(Low)</em>, Armory
+            <em>(Info)</em>, Sentinel <em>(Low)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> In AppBase, BudgetPlanner, Outfitter and Sentinel the Suspense fallback wraps &lt;Routes&gt;,
+          so on first load users see a bare &quot;Loading...&quot; on the body gradient instead of the shell. More
+          importantly, when a deploy replaces hashed chunks, a stale tab that navigates to a new lazy route throws
+          ChunkLoadError; only Codex and Armory catch it and offer Retry/reload. Elsewhere it falls into the generic
+          &quot;Something went wrong&quot; ErrorBoundary.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/app/routes.tsx:40-45</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Copy Codex ChunkErrorBoundary into AppBase, wrap the Suspense with it, and mirror.
+          Consider moving Suspense inside Layout around &lt;Outlet /&gt; so the shell paints immediately.
+        </p>
+      </article>
+
+      <article class="finding" id="f18">
+        <header>
+          <span class="num">18</span>
+          <h3>
+            Backend auth failure is silently treated as &quot;signed out&quot;; the auth error state is never shown
+          </h3>
+          <span class="sev sev-info">Info</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-02</span>
+          <span><b>Category</b> Error reporting</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(High)</em>, Codex <em>(Medium)</em>, Outfitter <em>(High)</em>, Armory
+            <em>(Medium)</em>, Sentinel <em>(High)</em></span
+          >
+        </div>
+        <p class="note">
+          <b>In BudgetPlanner:</b> Not affected in the same way: BudgetPlanner has no AuthContext and gates with Clerk
+          hooks directly. Server-side user sync failures surface as 500 &quot;Failed to sync user&quot; on the first
+          data call instead.
+        </p>
+        <p>
+          <b>Impact.</b> Every AuthContext computes status: &quot;error&quot; when GET /api/auth/me throws or returns
+          5xx, but no component in any app renders it. In AppBase, Outfitter and Sentinel, ProtectedRoute redirects on
+          anything other than &quot;authenticated&quot;, so a user who is signed in with Clerk but whose API is down is
+          bounced to /sign-in with no explanation (Clerk then shows them as already signed in). In Armory,
+          BuildStorageContext treats status !== &quot;ok&quot; as anonymous and quietly shows an empty library. Codex
+          ignores the backend entirely for gating (Clerk &lt;Show&gt; only). Users cannot distinguish &quot;not logged
+          in&quot; from &quot;the server is broken&quot;.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>grep for status === 'error' | auth.error across all six clients: 0 matches.</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Render the error state once, in Layout or the gate component: a banner &quot;Could not
+          verify your session&quot; with a Retry that calls auth.refresh(). Gate components must branch on error
+          separately from unauthenticated. Put this in AppBase ProtectedRoute and mirror it.
+        </p>
+      </article>
+
+      <article class="finding" id="f19">
+        <header>
+          <span class="num">19</span>
+          <h3>No shared typed API-error parsing; each app hand-rolls response.json() error extraction</h3>
+          <span class="sev sev-info">Info</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-05</span>
+          <span><b>Category</b> Error reporting</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Medium)</em>, Outfitter <em>(Medium)</em>, Armory
+            <em>(Info)</em>, Sentinel <em>(Low)</em></span
+          >
+        </div>
+        <p class="note">
+          <b>In BudgetPlanner:</b> Has the best helper (ApiError with fields[]); candidate for upstreaming.
+        </p>
+        <p>
+          <b>Impact.</b> Servers consistently return { error: string } (good), but the template exposes no helper to
+          read it. Only BudgetPlanner (ApiError + apiJson with field list) and Armory
+          (parseApiError/readApiErrorMessage) have typed helpers; Codex, Outfitter, Sentinel and AppBase parse ad hoc in
+          each page, with different fallback strings (&quot;Request failed&quot;, &quot;Failed to load fleet&quot;,
+          statusText, etc.).
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/utils/api.ts:1-11, 123-141</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Upstream BudgetPlanner's ApiError/apiJson (it already carries status and field names
+          for form errors) into AppBase utils/api.ts and mirror. Standardise fallback copy.
+        </p>
+      </article>
+
+      <article class="finding" id="f20">
+        <header>
+          <span class="num">20</span>
+          <h3>Only BudgetPlanner is localised; the other five apps are hard-coded English</h3>
+          <span class="sev sev-info">Info</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-11</span>
+          <span><b>Category</b> UI/UX</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Medium)</em>, Codex <em>(Low)</em>, Outfitter <em>(Low)</em>, Armory
+            <em>(Low)</em>, Sentinel <em>(Low)</em></span
+          >
+        </div>
+        <p class="note">
+          <b>In BudgetPlanner:</b> The only localised app (16 files use useTranslation; locales en.json/de.json). Its
+          LanguageSelector is not mirrored anywhere.
+        </p>
+        <p>
+          <b>Impact.</b> BudgetPlanner ships react-i18next with en/de bundles and a LanguageSelector in the user menu,
+          persisted server-side. Switching to German there and then opening any sibling app returns you to English with
+          no language control. For a platform that shares a login and a theme cookie, language is the obvious third
+          shared preference and it is missing.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li><code>BudgetPlanner/client/i18n/index.ts</code></li>
+            <li><code>BudgetPlanner/client/components/ui/LanguageSelector.tsx</code></li>
+            <li><code>BudgetPlanner/client/lib/locale.ts</code></li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Decide platform-wide: either add the i18n scaffold (provider, LanguageSelector,
+          dal.locale cookie) to AppBase and mirror, or document that DAL apps are English-only and remove the selector
+          from BudgetPlanner. If keeping i18n, share the locale via the same cookie mechanism as dal.theme.mode.
+        </p>
+      </article>
+
+      <article class="finding" id="f21">
+        <header>
+          <span class="num">21</span>
+          <h3>SelectDropdown has forked in four directions; improvements are not upstreamed</h3>
+          <span class="sev sev-info">Info</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-15</span>
+          <span><b>Category</b> Maintainability</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Low)</em>, Codex <em>(Low)</em>, Outfitter <em>(Info)</em>, Armory
+            <em>(Info)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> Codex made open/onOpenChange required (contradicting the AppBase AGENTS.md, which says they are
+          optional). BudgetPlanner added swatchClass, preserveOrder and focus-the-selected-option-on-open. Outfitter
+          added iconSrc and open-above-when-no-space logic. Armory changed the default trigger class. Each is a
+          reasonable improvement, but they now live in one app each, and the &quot;uncontrolled by default&quot;
+          contract is violated in Codex.
+        </p>
+        <div class="evidence">
+          <b>Evidence</b>
+          <ul>
+            <li>
+              <code
+                >BudgetPlanner/client/components/ui/SelectDropdown.tsx swatchClass, preserveOrder, selected-index
+                focus</code
+              >
+            </li>
+          </ul>
+        </div>
+        <p class="fix">
+          <b>Recommendation.</b> Merge the union (optional controlled mode, swatch/icon slots, preserveOrder,
+          open-above, selected-focus) into AppBase SelectDropdown and mirror. Keep app-specific defaults as props, not
+          forks.
+        </p>
+      </article>
+
+      <article class="finding is-done" id="f22">
+        <header>
+          <span class="num">22</span>
+          <h3>index.html metadata is minimal and inconsistent</h3>
+          <span class="sev sev-info">Info</span>
+        </header>
+        <div class="meta">
+          <span><b>Ref</b> P-18</span>
+          <span><b>Category</b> UI/UX</span>
+          <span
+            ><b>Also affects</b> AppBase <em>(Info)</em>, Codex <em>(Info)</em>, Outfitter <em>(Info)</em>, Armory
+            <em>(Info)</em>, Sentinel <em>(Info)</em></span
+          >
+        </div>
+
+        <p>
+          <b>Impact.</b> No app sets &lt;meta name=&quot;description&quot;&gt; or &lt;meta
+          name=&quot;theme-color&quot;&gt;, so link previews and mobile browser chrome are generic. AppBase uses
+          favicon.ico while all five siblings use favicon.png. Consistently missing rather than inconsistent, but cheap
+          to fix once in the template.
+        </p>
+
+        <p class="fix">
+          <b>Recommendation.</b> Add description and theme-color (matching --color-bg-start for dark) to AppBase
+          index.html and mirror; standardise the favicon format.
+        </p>
+      </article>
+
+      <h2>Platform matrix</h2>
+      <p class="sub">Presence/shape of shared concerns across the six apps. The BudgetPlanner column is highlighted.</p>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th class="">AppBase</th>
+            <th class="">Codex</th>
+            <th class="me">BudgetPlanner</th>
+            <th class="">Outfitter</th>
+            <th class="">Armory</th>
+            <th class="">Sentinel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Toast component</th>
+            <td class="">yes</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">no (CSS only)</td>
+            <td class="">custom</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>Button primitive</th>
+            <td class="">yes</td>
+            <td class="">no (raw classes)</td>
+            <td class="me">yes (buggy)</td>
+            <td class="">yes</td>
+            <td class="">no (raw classes)</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>Input primitive</th>
+            <td class="">yes</td>
+            <td class="">no</td>
+            <td class="me">yes</td>
+            <td class="">no</td>
+            <td class="">no</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>404 route</th>
+            <td class="">no</td>
+            <td class="">yes (in shell)</td>
+            <td class="me">no</td>
+            <td class="">no</td>
+            <td class="">yes (no shell)</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Skip link rendered</th>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Menu keyboard nav</th>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Version badge in header</th>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>Chunk-load recovery</th>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">no</td>
+            <td class="">yes</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Typed API error helper</th>
+            <td class="">no</td>
+            <td class="">no</td>
+            <td class="me">ApiError</td>
+            <td class="">no</td>
+            <td class="">parseApiError</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Auth status values</th>
+            <td class="">authenticated</td>
+            <td class="">ok</td>
+            <td class="me">Clerk hooks</td>
+            <td class="">authenticated</td>
+            <td class="">ok</td>
+            <td class="">authenticated</td>
+          </tr>
+          <tr>
+            <th>CSRF endpoint</th>
+            <td class="">/api/csrf</td>
+            <td class="">/api/auth/csrf</td>
+            <td class="me">/api/csrf</td>
+            <td class="">/api/csrf</td>
+            <td class="">/api/auth/csrf</td>
+            <td class="">/api/csrf</td>
+          </tr>
+          <tr>
+            <th>Theme keys</th>
+            <td class="">dal.*</td>
+            <td class="">dal.*</td>
+            <td class="me">bp.* (broken)</td>
+            <td class="">dal.*</td>
+            <td class="">dal.*</td>
+            <td class="">dal.*</td>
+          </tr>
+          <tr>
+            <th>i18n</th>
+            <td class="">no</td>
+            <td class="">no</td>
+            <td class="me">en/de</td>
+            <td class="">no</td>
+            <td class="">no</td>
+            <td class="">no</td>
+          </tr>
+          <tr>
+            <th>Legal page</th>
+            <td class="">in-app</td>
+            <td class="">external</td>
+            <td class="me">external</td>
+            <td class="">external (no fallback route)</td>
+            <td class="">external</td>
+            <td class="">in-app</td>
+          </tr>
+          <tr>
+            <th>Default port</th>
+            <td class="">3000</td>
+            <td class="">3001</td>
+            <td class="me">3002 (collides)</td>
+            <td class="">3004</td>
+            <td class="">3002 (collides)</td>
+            <td class="">3005</td>
+          </tr>
+          <tr>
+            <th>createApp() in server/app.ts</th>
+            <td class="">yes</td>
+            <td class="">no</td>
+            <td class="me">yes</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>Request id + logger</th>
+            <td class="">yes</td>
+            <td class="">yes</td>
+            <td class="me">no</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+            <td class="">yes</td>
+          </tr>
+          <tr>
+            <th>Largest client file (LOC)</th>
+            <td class="">269</td>
+            <td class="">946</td>
+            <td class="me">780</td>
+            <td class="">1410</td>
+            <td class="">2288</td>
+            <td class="">269</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Patterns worth adopting platform-wide</h2>
+      <p class="sub">
+        Good implementations that already exist in one app and would close several findings above if lifted into AppBase
+        and mirrored.
+      </p>
+      <ul class="pos">
+        <li>
+          <b>Codex:</b> ChunkErrorBoundary with Retry (client/app/routes.tsx) - recovers from stale chunks after
+          deploys.
+        </li>
+        <li>
+          <b>Codex / Armory:</b> Full keyboard model for the user menu (roving focus, Home/End, focus return) and skip
+          link.
+        </li>
+        <li>
+          <b>Codex:</b> LoadErrorBanner with Retry and role=&quot;alert&quot;; ConfirmModal for destructive actions.
+        </li>
+        <li>
+          <b>Armory:</b> Session-expired modal driven by a global unauthorized event (Layout.tsx) - the only app that
+          tells users why a request failed after a session lapse.
+        </li>
+        <li><b>Armory:</b> parseApiError/readApiErrorMessage and sendInternalError helpers.</li>
+        <li>
+          <b>BudgetPlanner:</b> ApiError + apiJson with field-level error names; i18n scaffold; delete confirmation via
+          glass Modal.
+        </li>
+        <li>
+          <b>Outfitter:</b> Modal effect dependency fix ([open, mounted]); SelectDropdown open-above logic and icon
+          slot.
+        </li>
+        <li>
+          <b>All:</b> Server error bodies are uniformly { error: string } with X-CSRF-Error / code CSRF_INVALID;
+          dependency versions are identical across all six package.json files; @theme, light-mode and UI-style token
+          blocks are aligned apart from the Codex values in A-CX-04.
+        </li>
+      </ul>
+
+      <h2>Suggested order of work</h2>
+      <ol>
+        <li>
+          Fix the two live BudgetPlanner bugs (theme keys A-BP-01, Clerk wildcard routes A-BP-02) and the Sentinel
+          refresh gap (A-SN-01); they affect users today.
+        </li>
+        <li>
+          Decide the error-presentation contract (P-01) and the auth error/gate behaviour (P-02, P-03), implement once
+          in AppBase, then mirror. This is the bulk of the "one coherent platform" work.
+        </li>
+        <li>
+          Bring AppBase up to the level of its own references (A-AB-01, P-07, P-08, P-09, P-16) so future apps start
+          consistent.
+        </li>
+        <li>
+          Sweep the low-severity drift (token values, SelectDropdown union, sign-out targets, ports/docs) in one mirror
+          pass and extend the AGENTS.md checklist so it covers structure, not only tokens.
+        </li>
+      </ol>
+
+      <footer>Report file: PLATFORM-AUDIT.html. One report per repository; same finding refs across all six.</footer>
+    </main>
+  </body>
+</html>

@@ -99,8 +99,8 @@ export const SESSION_DB_PATH =
   process.env.SESSION_DB_PATH || process.env.CENTRAL_DB_PATH || path.join(DATA_DIR, 'sessions.db');
 export const APP_DB_PATH = process.env.APP_DB_PATH || path.join(DATA_DIR, 'app.db');
 
-const _port = parseInt(process.env.PORT || '3002', 10);
-export const PORT = Number.isFinite(_port) && _port > 0 ? _port : 3002;
+const _port = parseInt(process.env.PORT || '3003', 10);
+export const PORT = Number.isFinite(_port) && _port > 0 ? _port : 3003;
 export const HOST = process.env.HOST || '127.0.0.1';
 const DEFAULT_SESSION_SECRET = 'budgetplanner-dev-secret-change-me';
 export const SESSION_SECRET = process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET;

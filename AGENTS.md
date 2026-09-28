@@ -8,7 +8,7 @@ Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, val
 
 BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Clerk is identity only. Plan membership, invites, and roles live in app SQLite (`plan_members`); this is not Clerk Organizations.
 
-Default listen port in code is **3002**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
+Default listen port in code is **3003**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
 
 ## Money and plans
 

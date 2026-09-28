@@ -4,6 +4,8 @@ import { Route, Routes } from 'react-router';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Layout } from '../components/Layout/Layout';
+import { ChunkErrorBoundary } from '../components/ui/ChunkErrorBoundary';
+import { NotFoundPage } from '../features/not-found/NotFoundPage';
 import { APP_PATHS } from './paths';
 
 const HomePage = lazy(() =>
@@ -42,18 +44,21 @@ export function AppRoutes() {
       fallbackHint={t('app.crashHint')}
       fallbackReloadLabel={t('app.crashReload')}
     >
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path={APP_PATHS.signIn} element={<SignInPage />} />
-          <Route path={APP_PATHS.signUp} element={<SignUpPage />} />
-          <Route element={<Layout />}>
-            <Route path={APP_PATHS.home} element={<HomePage />} />
-            <Route path="/plan/:planId" element={<PlanPage />} />
-            <Route path="/invite/:token" element={<InvitePage />} />
-            <Route path={APP_PATHS.legal} element={<LegalPage />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <ChunkErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path={APP_PATHS.home} element={<HomePage />} />
+              <Route path="/plan/:planId" element={<PlanPage />} />
+              <Route path="/invite/:token" element={<InvitePage />} />
+              <Route path={APP_PATHS.legal} element={<LegalPage />} />
+              <Route path={`${APP_PATHS.signIn}/*`} element={<SignInPage />} />
+              <Route path={`${APP_PATHS.signUp}/*`} element={<SignUpPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ChunkErrorBoundary>
     </ErrorBoundary>
   );
 }

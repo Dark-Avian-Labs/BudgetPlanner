@@ -130,6 +130,9 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       {clerkEnabled ? <ClerkTokenBridge /> : null}
       <HexSideBackground />
       <AsciiWaveBackground />
@@ -184,7 +187,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="relative z-0 flex-1 px-4 pb-24 sm:px-6">
+      <main id="main-content" className="relative z-0 flex-1 px-4 pb-24 sm:px-6">
         <div className="mx-auto w-full max-w-3xl">
           <Outlet />
         </div>
