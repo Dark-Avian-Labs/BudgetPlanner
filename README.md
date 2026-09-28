@@ -20,11 +20,6 @@ English is the default. German is ready when we need it.
 
 Live: [budget.darkavianlabs.com](https://budget.darkavianlabs.com)
 
-## Gotchas
-
-- App and session SQLite files must be different paths.
-- The owner cannot leave a plan. They delete it.
-
 ## License
 
 MIT

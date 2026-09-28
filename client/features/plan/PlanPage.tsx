@@ -10,12 +10,12 @@ import {
   type PlanMonth,
 } from '../../../shared/planMonth';
 import { FrequencyBadge } from '../../components/budget/FrequencyBadge';
-import { RequireAuth } from '../../components/Layout/Layout';
 import { Button } from '../../components/ui/Button';
 import { FormSelect } from '../../components/ui/FormSelect';
 import { Input } from '../../components/ui/Input';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Modal } from '../../components/ui/Modal';
+import { RequireAuth } from '../../features/auth/RequireAuth';
 import { formatMoney } from '../../lib/format';
 import { removeEntryFromPlan } from '../../lib/planEntriesState';
 import { canEdit, type Entry, type PlanDetail } from '../../lib/types';

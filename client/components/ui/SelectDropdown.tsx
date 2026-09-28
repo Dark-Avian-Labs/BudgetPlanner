@@ -14,7 +14,29 @@ import { MaterialSymbol } from './MaterialSymbol';
 export interface SelectDropdownOption {
   value: string;
   label: string;
+  iconSrc?: string;
   swatchClass?: string;
+}
+
+function SelectOptionLabel({
+  option,
+  fallback,
+}: {
+  option?: SelectDropdownOption;
+  fallback: string;
+}) {
+  const label = option?.label ?? fallback;
+  return (
+    <>
+      {option?.swatchClass ? (
+        <span className={`account-swatch ${option.swatchClass}`} aria-hidden />
+      ) : null}
+      {option?.iconSrc ? (
+        <img src={option.iconSrc} alt="" className="select-dropdown-icon" />
+      ) : null}
+      <span className="min-w-0 truncate">{label}</span>
+    </>
+  );
 }
 
 interface MenuRect {
@@ -98,9 +120,12 @@ export function SelectDropdown({
     const useFloating = placement === 'floating' || spaceBelow < FLOATING_MIN_SPACE_PX;
 
     if (useFloating) {
-      const maxHeight = Math.min(MENU_MAX_HEIGHT_PX, Math.max(FLOATING_MIN_SPACE_PX, spaceBelow));
+      const spaceAbove = r.top - MENU_GAP_PX - VIEWPORT_MARGIN_PX;
+      const openAbove = spaceBelow < FLOATING_MIN_SPACE_PX && spaceAbove > spaceBelow;
+      const availableSpace = openAbove ? spaceAbove : spaceBelow;
+      const maxHeight = Math.min(MENU_MAX_HEIGHT_PX, Math.max(0, availableSpace));
       setMenuRect({
-        top: r.bottom + MENU_GAP_PX,
+        top: openAbove ? r.top - MENU_GAP_PX - maxHeight : r.bottom + MENU_GAP_PX,
         left: r.left,
         width: r.width,
         maxHeight,
@@ -148,7 +173,7 @@ export function SelectDropdown({
 
   useEffect(() => {
     if (!open) return;
-    const selectedIdx = displayOptions.findIndex((o) => o.value === value);
+    const selectedIdx = displayOptions.findIndex((option) => option.value === value);
     setFocusedIndex(selectedIdx < 0 ? 0 : selectedIdx);
   }, [displayOptions, open, value]);
 
@@ -164,7 +189,6 @@ export function SelectDropdown({
 
   const selected = options.find((o) => o.value === value);
   const label = selected?.label ?? placeholder;
-  const selectedSwatch = selected?.swatchClass;
 
   const listboxId = id ? `${id}-listbox` : undefined;
   const buttonId = id ? `${id}-button` : undefined;
@@ -248,12 +272,7 @@ export function SelectDropdown({
                   setOpen(false);
                 }}
               >
-                <span className="flex min-w-0 items-center gap-2">
-                  {opt.swatchClass ? (
-                    <span className={`account-swatch ${opt.swatchClass}`} aria-hidden />
-                  ) : null}
-                  <span className="min-w-0 truncate">{opt.label}</span>
-                </span>
+                <SelectOptionLabel option={opt} fallback={opt.label} />
               </button>
             );
           })}
@@ -285,13 +304,11 @@ export function SelectDropdown({
           }
         }}
       >
-        <span className="flex min-w-0 flex-1 items-center gap-2 truncate" title={label}>
-          {selectedSwatch ? (
-            <span className={`account-swatch ${selectedSwatch}`} aria-hidden />
-          ) : null}
-          <span className={`min-w-0 truncate ${value ? 'text-foreground' : 'text-muted'}`}>
-            {label}
-          </span>
+        <span
+          className={`flex min-w-0 flex-1 flex-nowrap items-center gap-2 ${value ? 'text-foreground' : 'text-muted'}`}
+          title={label}
+        >
+          <SelectOptionLabel option={selected} fallback={placeholder} />
         </span>
         <span aria-hidden className="text-muted inline-flex shrink-0 items-center justify-center">
           {open ? (

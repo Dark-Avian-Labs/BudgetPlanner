@@ -5,11 +5,11 @@ import { Link, useNavigate } from 'react-router';
 
 import { CURRENCIES } from '../../../shared/currencies';
 import { planPath } from '../../app/paths';
-import { RequireAuth } from '../../components/Layout/Layout';
 import { Button } from '../../components/ui/Button';
 import { FormSelect } from '../../components/ui/FormSelect';
 import { Input } from '../../components/ui/Input';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
+import { RequireAuth } from '../../features/auth/RequireAuth';
 import type { Me, PlanSummary } from '../../lib/types';
 import { apiJson } from '../../utils/api';
 

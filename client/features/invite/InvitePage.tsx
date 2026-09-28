@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 
 import { planPath } from '../../app/paths';
-import { RequireAuth } from '../../components/Layout/Layout';
 import { Button } from '../../components/ui/Button';
+import { RequireAuth } from '../../features/auth/RequireAuth';
 import { apiJson } from '../../utils/api';
 
 interface InvitePreview {

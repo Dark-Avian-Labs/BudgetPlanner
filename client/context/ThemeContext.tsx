@@ -31,12 +31,16 @@ interface ThemeContextValue {
 }
 
 const THEME_STORAGE_KEY = 'budgetplanner.theme.mode';
-const SHARED_THEME_STORAGE_KEY = 'bp.theme.mode';
-const THEME_COOKIE = 'bp.theme.mode';
+const SHARED_THEME_STORAGE_KEY = 'dal.theme.mode';
+const THEME_COOKIE = 'dal.theme.mode';
+const LEGACY_THEME_STORAGE_KEY = 'bp.theme.mode';
+const LEGACY_THEME_COOKIE = 'bp.theme.mode';
 const THEME_COOKIE_DOMAIN =
   (import.meta.env.VITE_SHARED_THEME_COOKIE_DOMAIN as string | undefined) ?? '';
-const UI_STYLE_STORAGE_KEY = 'bp.ui.style';
-const UI_STYLE_COOKIE = 'bp.ui.style';
+const UI_STYLE_STORAGE_KEY = 'dal.ui.style';
+const UI_STYLE_COOKIE = 'dal.ui.style';
+const LEGACY_UI_STYLE_STORAGE_KEY = 'bp.ui.style';
+const LEGACY_UI_STYLE_COOKIE = 'bp.ui.style';
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -49,15 +53,22 @@ function safeReadStorage(key: string): string | null {
   }
 }
 
-function parseThemeCookie(): ThemeMode | null {
+function readCookie(name: string): string | null {
   const raw = document.cookie
     .split(';')
     .map((part) => part.trim())
-    .find((part) => part.startsWith(`${THEME_COOKIE}=`))
+    .find((part) => part.startsWith(`${name}=`))
     ?.split('=')
     .slice(1)
     .join('=');
-  if (raw === 'light' || raw === 'dark') return raw;
+  return raw ?? null;
+}
+
+function parseThemeCookie(): ThemeMode | null {
+  for (const name of [THEME_COOKIE, LEGACY_THEME_COOKIE]) {
+    const raw = readCookie(name);
+    if (raw === 'light' || raw === 'dark') return raw;
+  }
   return null;
 }
 
@@ -71,14 +82,11 @@ function normalizeUiStyle(raw: string | null | undefined): UiStyle | null {
 }
 
 function parseUiStyleCookie(): UiStyle | null {
-  const raw = document.cookie
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${UI_STYLE_COOKIE}=`))
-    ?.split('=')
-    .slice(1)
-    .join('=');
-  return normalizeUiStyle(raw);
+  for (const name of [UI_STYLE_COOKIE, LEGACY_UI_STYLE_COOKIE]) {
+    const style = normalizeUiStyle(readCookie(name));
+    if (style) return style;
+  }
+  return null;
 }
 
 function resolveInitialMode(): ThemeMode {
@@ -87,6 +95,8 @@ function resolveInitialMode(): ThemeMode {
   if (fromCookie) return fromCookie;
   const shared = safeReadStorage(SHARED_THEME_STORAGE_KEY);
   if (shared === 'light' || shared === 'dark') return shared;
+  const legacy = safeReadStorage(LEGACY_THEME_STORAGE_KEY);
+  if (legacy === 'light' || legacy === 'dark') return legacy;
   const stored = safeReadStorage(THEME_STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
   return 'dark';
@@ -98,6 +108,8 @@ function resolveInitialUiStyle(): UiStyle {
   if (fromCookie) return fromCookie;
   const stored = normalizeUiStyle(safeReadStorage(UI_STYLE_STORAGE_KEY));
   if (stored) return stored;
+  const legacy = normalizeUiStyle(safeReadStorage(LEGACY_UI_STYLE_STORAGE_KEY));
+  if (legacy) return legacy;
   return 'prism';
 }
 

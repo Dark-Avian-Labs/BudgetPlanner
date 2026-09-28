@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const apiTarget = process.env.VITE_DEV_API_TARGET?.trim() || 'http://127.0.0.1:3002';
+const apiTarget = process.env.VITE_DEV_API_TARGET?.trim() || 'http://127.0.0.1:3003';
 const vitePort = process.env.VITE_DEV_PORT?.trim() || '5173';
 
 const devEnv = {

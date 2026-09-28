@@ -11,8 +11,6 @@ const DEV_AUTHORIZED_PARTIES = [
   'http://127.0.0.1:3003',
   'http://localhost:3004',
   'http://127.0.0.1:3004',
-  'http://localhost:3040',
-  'http://127.0.0.1:3040',
   'http://localhost:4173',
   'http://127.0.0.1:4173',
   'http://localhost:5173',

@@ -17,10 +17,14 @@
         return '';
       }
     }
-    var theme = readCookie('bp.theme.mode').trim();
+    var theme = readCookie('dal.theme.mode').trim();
+    if (theme !== 'light' && theme !== 'dark') theme = readCookie('bp.theme.mode').trim();
     if (theme !== 'light' && theme !== 'dark') {
       try {
-        theme = (localStorage.getItem('bp.theme.mode') || '').trim();
+        theme = (localStorage.getItem('dal.theme.mode') || '').trim();
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = (localStorage.getItem('bp.theme.mode') || '').trim();
+        }
       } catch (e) {
         if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
           console.warn('Unable to read theme from localStorage; falling back to default.', e);
@@ -40,14 +44,19 @@
     root.classList.remove('dark');
     if (theme === 'dark') root.classList.add('dark');
 
-    var ui = readCookie('bp.ui.style').trim();
     var uiStyles = ['prism', 'shadow', 'clear', 'acrylic'];
     function isUiStyle(value) {
       return uiStyles.indexOf(value) !== -1;
     }
+    var ui = readCookie('dal.ui.style').trim();
+    if (!isUiStyle(ui)) ui = readCookie('bp.ui.style').trim();
     if (!isUiStyle(ui)) {
       try {
-        ui = (localStorage.getItem('bp.ui.style') || '').trim();
+        ui = (
+          localStorage.getItem('dal.ui.style') ||
+          localStorage.getItem('bp.ui.style') ||
+          ''
+        ).trim();
       } catch (e) {
         if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
           console.warn('Unable to read UI style from localStorage; falling back to default.', e);
@@ -60,5 +69,7 @@
       root.classList.remove('ui-' + uiStyles[i]);
     }
     root.classList.add('ui-' + ui);
-  } catch {}
+  } catch {
+    // ignore
+  }
 })();
