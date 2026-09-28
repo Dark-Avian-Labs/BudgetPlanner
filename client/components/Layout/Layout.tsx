@@ -1,7 +1,7 @@
-import { Show, SignInButton, useAuth, useClerk } from '@clerk/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Show, useAuth, useClerk } from '@clerk/react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Outlet } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 
 import {
   APP_DISPLAY_NAME,
@@ -17,7 +17,9 @@ import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { MaterialSymbol } from '../../components/ui/MaterialSymbol';
 import { Menu } from '../../components/ui/Menu';
 import { UiStyleSelector } from '../../components/ui/UiStyleSelector';
+import { useRovingMenu } from '../../components/ui/useRovingMenu';
 import { useTheme } from '../../context/ThemeContext';
+import { buildAuthPagePath, safeAuthRedirectPath } from '../../features/auth/authRedirect';
 import { bindLocaleOwner, syncLocaleFromServer } from '../../lib/locale';
 import { setClerkTokenGetter } from '../../utils/api';
 import { AsciiWaveBackground } from './AsciiWaveBackground';
@@ -57,7 +59,13 @@ function ClerkSessionMenu({ onClose }: { onClose: () => void }) {
   if (!isSignedIn) {
     return (
       <>
-        <Link to={APP_PATHS.signIn} className="user-menu-item" role="menuitem" onClick={onClose}>
+        <Link
+          to={APP_PATHS.signIn}
+          className="user-menu-item"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={onClose}
+        >
           {t('app.signIn')}
         </Link>
         <div className="user-menu-divider" role="separator" />
@@ -73,6 +81,7 @@ function ClerkSessionMenu({ onClose }: { onClose: () => void }) {
         type="button"
         className="user-menu-item text-left"
         role="menuitem"
+        tabIndex={-1}
         onClick={() => {
           onClose();
           clerk.openUserProfile({
@@ -89,6 +98,7 @@ function ClerkSessionMenu({ onClose }: { onClose: () => void }) {
         type="button"
         className="user-menu-item text-left"
         role="menuitem"
+        tabIndex={-1}
         onClick={() => {
           onClose();
           bindLocaleOwner(null);
@@ -106,27 +116,9 @@ export function Layout() {
   const { mode, toggleMode } = useTheme();
   const currentYear = new Date().getFullYear();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const { menuRef, triggerRef, onMenuKeyDown } = useRovingMenu(userMenuOpen, setUserMenuOpen);
   const clerkEnabled = Boolean(CLERK_PUBLISHABLE_KEY);
   const userMenuId = 'budgetplanner-user-menu';
-
-  useEffect(() => {
-    if (!userMenuOpen) return undefined;
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setUserMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [userMenuOpen]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -159,6 +151,7 @@ export function Layout() {
 
             <div ref={menuRef} className="relative">
               <button
+                ref={triggerRef}
                 type="button"
                 className="icon-toggle-btn"
                 aria-haspopup="menu"
@@ -171,7 +164,12 @@ export function Layout() {
               </button>
               {userMenuOpen ? (
                 <Menu>
-                  <div id={userMenuId} role="menu" aria-orientation="vertical">
+                  <div
+                    id={userMenuId}
+                    role="menu"
+                    aria-orientation="vertical"
+                    onKeyDown={onMenuKeyDown}
+                  >
                     {clerkEnabled ? (
                       <ClerkSessionMenu onClose={() => setUserMenuOpen(false)} />
                     ) : (
@@ -211,6 +209,10 @@ export function Layout() {
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const returnTo =
+    safeAuthRedirectPath(`${location.pathname}${location.search}${location.hash}`) ??
+    APP_PATHS.home;
 
   if (!CLERK_PUBLISHABLE_KEY) {
     return (
@@ -223,13 +225,23 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   return (
     <>
       <Show when="signed-out" fallback={null}>
-        <div className="glass-surface flex flex-col items-start gap-4 p-6">
-          <p className="text-sm">{t('auth.signInSubtitle')}</p>
-          <SignInButton mode="modal">
-            <button type="button" className="btn btn-accent">
+        <div className="glass-panel mx-auto w-full max-w-lg p-8 text-center">
+          <h1 className="mb-3 text-2xl font-semibold tracking-tight">{t('auth.signInTitle')}</h1>
+          <p className="text-muted mb-6 text-sm leading-relaxed">{t('auth.signInSubtitle')}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link
+              to={buildAuthPagePath(APP_PATHS.signUp, returnTo)}
+              className="btn btn-accent w-full sm:w-auto"
+            >
+              {t('auth.signUpTitle')}
+            </Link>
+            <Link
+              to={buildAuthPagePath(APP_PATHS.signIn, returnTo)}
+              className="btn btn-secondary w-full sm:w-auto"
+            >
               {t('app.signIn')}
-            </button>
-          </SignInButton>
+            </Link>
+          </div>
         </div>
       </Show>
       <Show when="signed-in">{children}</Show>

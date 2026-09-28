@@ -143,7 +143,7 @@ export const CLERK_CONFIGURED = isClerkConfigured();
 export const LEGAL_PAGE_URL =
   process.env.LEGAL_PAGE_URL?.trim() ||
   process.env.VITE_LEGAL_PAGE_URL?.trim() ||
-  'https://darkavianlabs.com/legal/';
+  'https://darkavianlabs.com/legal';
 
 export function ensureDataDirs(): void {
   fs.mkdirSync(DATA_DIR, { recursive: true });
