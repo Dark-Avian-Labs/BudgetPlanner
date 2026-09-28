@@ -57,3 +57,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.8.3** `chore(deps)` [#72](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/72): bump @dotenvx/dotenvx to 2.30.0 and fix ESM import
 - **v1.8.4** `chore(deps)` [#73](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/73): bump the production-dependencies group across 1 directory with 2 updates
 - **v1.8.5** `chore` [#75](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/75): fix/app nav rail windows
+- **v1.8.6** `chore` [#76](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/76): fix/platform audit shell
