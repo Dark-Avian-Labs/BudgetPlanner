@@ -1,54 +1,15 @@
 # BudgetPlanner
 
-## Org standards
+Shell, auth, env, and validate are in AppBase `AGENTS.md`. Port 3003. Playwright 3103. This app uses the compact shell: `max-w-3xl` and an `h-14` header.
 
-Shared Dark Avian Labs engineering conventions (README shape, CI/PR runners, validate, release tracks) live in AppBase [`docs/org-standards/`](../AppBase/docs/org-standards/). The design system (theme axes, glass contracts, UI primitives, Clerk appearance) lives in AppBase [`AGENTS.md`](../AppBase/AGENTS.md). There is no shared UI package: when you change layout, glass, buttons, or modals here, apply the same change in AppBase / Codex / Armory.
+Household budget. Clerk is identity only. Membership is `plan_members` in app SQLite, not Clerk Organizations.
 
-## Overview
+Money is integer cents. `shared/dueThisMonth.ts` is the only this-month implementation. Do not fork it.
 
-BudgetPlanner is a mobile-first household budget app for shared recurring expenses, income, and credits. Clerk is identity only. Plan membership, invites, and roles live in app SQLite (`plan_members`); this is not Clerk Organizations.
+Without Clerk keys, auth routes return 503 and the server still starts. Do not copy placeholder keys from another app.
 
-Default listen port in code is **3003**. Keep `PORT` and `VITE_DEV_API_TARGET` aligned. See `README.md` for scripts and env.
+`APP_DB_PATH` and `SESSION_DB_PATH` must be different files. `pnpm run db:backup` copies the app DB only.
 
-## Money and plans
+The owner cannot leave a plan. They delete it. Invite accept requires the signed-in email to match the invite. Viewers cannot mutate. Archived rows use `archived_at`.
 
-Money is stored as **integer cents**. Category and account IDs on writes must belong to the same plan (`server/lib/planValidation.ts`). `shared/dueThisMonth.ts` is the source of truth for this-month math; do not fork the rules in only the client or only the server wrapper.
-
-Cadence includes monthly, quarterly, half-yearly, yearly, and `once`. Expired `once` entries are auto-archived on plan load and on entry writes. The plan UI can view other months (next month for print, past months for archived one-time items). Viewing a month includes archived `once` entries that were due then. Credits can use `final_amount_cents` for the last installment.
-
-Roles are owner / editor / viewer. Invites are editor or viewer only; viewers cannot mutate. Invite accept requires the signed-in Clerk user's email to match the invite row (case-insensitive); mismatch is 403. The owner cannot leave: they delete the plan instead. Archived entries are soft-deleted (`archived_at`). The live current-month list skips them.
-
-## Databases
-
-Two SQLite files. Do not point them at the same path, and do not reuse Armory or Codex session/catalog files.
-
-| File    | Env               | Role                                           |
-| ------- | ----------------- | ---------------------------------------------- |
-| App     | `APP_DB_PATH`     | Plans, members, categories, accounts, entries. |
-| Session | `SESSION_DB_PATH` | Express sessions / CSRF.                       |
-
-`pnpm run db:backup` copies `APP_DB_PATH` only (`scripts/backup-app-db.mjs`).
-
-## Auth
-
-Clerk keys are required for auth routes; without them those routes return **503** (the server still starts). Empty keys skip `clerkMiddleware`: `isClerkConfigured()` is false and every request is treated as unsigned. Placeholder keys (`pk_test_placeholder` / `sk_test_placeholder`) and bare `pk_test_` / `sk_test_` prefixes are **FATAL** at `isClerkConfigured()`. Leave both keys empty instead of faking values. Do not copy placeholder keys from Armory or Codex. CSRF tokens rotate when the Clerk user id on the express session changes (`server/session/bindClerkUserSession.ts`). Playwright runs unsigned (empty keys); auth routes stay 503.
-
-Cursor agents sign in with Clerk Agent Tasks. Do not type a password. Decrypt `.env.development` and read `E2E_CLERK_USER_EMAIL` or `E2E_CLERK_USER_ID`. POST `https://api.clerk.com/v1/agents/tasks` using `CLERK_SECRET_KEY`. Send `agent_name`, `task_description`, `permissions` `*`, `redirect_url` `http://localhost:5173/`, and `on_behalf_of` with `user_id` or `identifier`. Open the URL Clerk returns. The same development user works for AppBase, Codex, Armory, BudgetPlanner, and Outfitter. Local cookies are host-only, so each app origin needs its own task. Do not invent local fake keys.
-
-Production `COOKIE_DOMAIN=.darkavianlabs.com` is intentional so DAL apps share a login. `APP_PUBLIC_BASE_URL` is required when Clerk is configured; `ALLOWED_APP_ORIGINS` lists sibling apps for Clerk `authorizedParties`. Keep `VITE_*` plaintext; encrypting them garbles unwrapped `vite` / `vite build`. `pnpm run build` decrypts `.env.production` first. If you add app roles later, configure the Clerk session token with `"metadata": "{{user.public_metadata}}"` (`apps.budgetplanner`).
-
-## Toolchain
-
-Node **26+**, pnpm **12.x**, exact `packageManager`. Encrypted `.env.development` / `.env.production` need `DOTENV_PRIVATE_KEY_*` or `.env.keys`. `pnpm dev` decrypts `.env.development` with dotenvx (`--strict`) before spawning Vite and the API. `pnpm run validate` is the quality gate.
-
-On Windows, Cursor agent shells may prepend bundled Node 22. After changing Node versions, run `pnpm rebuild better-sqlite3`.
-
-## Tests
-
-`pnpm run validate` is the quality gate: preflight, oxfmt, oxlint, typecheck, Vitest. In CI that Vitest step is instrumented (`pnpm run test:coverage`); locally `pnpm test` stays uninstrumented. Use `pnpm run test:watch` while iterating.
-
-HTTP tests that need the real stack (health, CSRF, Helmet, `/api/version`) go through `createApp()` in `server/app.ts`. `server/index.ts` only ensures data dirs, then `createApp()`, listen, and shutdown. `createApp` applies session and app schema, including injected `:memory:` databases.
-
-Vitest is Node-only (`*.test.ts` under server, client, and shared). Coverage includes `server/`, `shared/`, and `client/utils/`. There is no happy-dom client suite.
-
-Playwright (`pnpm run test:e2e`) is **not** inside validate. It boots the compiled server (`dist/server/index.js`) on port **3103** with throwaway sqlite files after `pnpm run build` (dotenvx decrypts `.env.production`). Smokes cover probes, CSRF, API 404, and SPA `GET /` **200**. Run `pnpm run test:e2e:install` once per machine.
+English and German strings both exist. Add a key to both locale files.

@@ -167,7 +167,7 @@ function migrateEntriesHalfyearlyFrequency(db: Database.Database): void {
     .get() as { sql: string } | undefined;
   if (!row?.sql || row.sql.includes("'halfyearly'") || row.sql.includes("'once'")) return;
 
-  rebuildEntriesTable(db, /* includeOnce */ false);
+  rebuildEntriesTable(db, false);
 }
 
 function migrateEntriesOnceFrequency(db: Database.Database): void {
@@ -183,7 +183,7 @@ function migrateEntriesOnceFrequency(db: Database.Database): void {
   if (hasOnce && hasDueYear) return;
 
   if (!hasOnce) {
-    rebuildEntriesTable(db, /* includeOnce */ true);
+    rebuildEntriesTable(db, true);
     return;
   }
 
