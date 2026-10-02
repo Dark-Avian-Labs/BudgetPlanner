@@ -4,7 +4,7 @@ allowBuilds:
   unrs-resolver: true
 
 overrides:
-  undici: ^8.10.2
+  undici: '>7.29.1'
 
 update:
   githubActions: true

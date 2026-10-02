@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Outlet } from 'react-router';
 
-import feathers from '../../../assets/feathers.png';
+import feathers from '../../../assets/feathers.svg';
 import {
   APP_DISPLAY_NAME,
   APP_ID,
@@ -131,9 +131,7 @@ export function Layout() {
                 alt="Dark Avian Labs feather mark"
                 className="brand-lockup__icon"
               />
-              <span className="brand-lockup__title brand-lockup--fx truncate text-lg sm:text-xl">
-                {APP_DISPLAY_NAME}
-              </span>
+              <span className="brand-lockup__title brand-lockup--fx">{APP_DISPLAY_NAME}</span>
             </Link>
             <span
               className="text-muted shrink-0 font-mono text-[10px] leading-none tracking-wide opacity-70"
