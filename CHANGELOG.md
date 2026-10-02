@@ -59,3 +59,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.8.5** `chore` [#75](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/75): fix/app nav rail windows
 - **v1.8.6** `chore` [#76](https://github.com/Dark-Avian-Labs/BudgetPlanner/pull/76): fix/platform audit shell
 - **v1.8.7** `chore`: Merge pull request 'ci: run checks on Forgejo' (#78) from ci/forgejo-workflows into main
+- **v1.9.0** `chore`: Merge pull request 'Replace the header feather and the soft wordmark glow' (#82) from feat/header-mark into main
