@@ -20,7 +20,7 @@ on:
       - 'shared/**'
       - 'e2e/**'
       - 'playwright.config.ts'
-      - 'favicon.png'
+      - 'public/**'
       - '.env.production'
       - '.releaserc.json'
       - '.forgejo/workflows/ci.yml'
@@ -240,6 +240,10 @@ jobs:
 
       - name: Run end-to-end tests
         run: pnpm run test:e2e
+        env:
+          DOTENV_PRIVATE_KEY_DEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_DEVELOPMENT }}
+          E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
+          E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
 
       - name: Setup SSH
         env:
@@ -296,7 +300,9 @@ jobs:
           if [ -d icons ]; then cp -r icons/ /tmp/deploy/; fi
           cp package.json pnpm-lock.yaml pnpm-workspace.yaml /tmp/deploy/
           if [ -f .env.production ]; then cp .env.production /tmp/deploy/; fi
-          if [ -f favicon.png ]; then cp favicon.png /tmp/deploy/; fi
+          mkdir -p /tmp/deploy/public
+          cp public/favicon.svg /tmp/deploy/public/favicon.svg
+          cp public/favicon.png /tmp/deploy/public/favicon.png
           printf 'DOTENV_PRIVATE_KEY_PRODUCTION=%s\n' "$DOTENV_PRIVATE_KEY_PRODUCTION" > /tmp/deploy/.env.keys
           chmod 600 /tmp/deploy/.env.keys
           test -s /tmp/deploy/.env.keys || { echo "ERROR: Failed to create .env.keys in deployment bundle."; exit 1; }
