@@ -44,4 +44,5 @@ test('unknown API routes return JSON 404', async ({ request }) => {
 test('SPA is served when the client build exists', async ({ request }) => {
   const res = await request.get('/');
   expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toMatch(/html/);
 });

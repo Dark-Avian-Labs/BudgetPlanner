@@ -221,7 +221,7 @@ export function createApp(options: CreateAppOptions = {}): AppBundle {
 
   app.use('/api', appApiLimiter, apiRouter);
 
-  const faviconPng = path.join(PROJECT_ROOT, 'favicon.png');
+  const faviconPng = path.join(PROJECT_ROOT, 'public', 'favicon.png');
   app.get('/favicon.png', publicPageLimiter, (_req, res) => {
     res.sendFile(faviconPng);
   });
@@ -233,55 +233,56 @@ export function createApp(options: CreateAppOptions = {}): AppBundle {
     res.status(404).json({ error: 'Not found' });
   });
 
-  const clientDir = path.join(PROJECT_ROOT, 'dist', 'client');
-  const clientIndexPath = path.join(clientDir, 'index.html');
-
-  function sendLegalRedirect(res: express.Response): void {
-    res.redirect(LEGAL_PAGE_URL);
-  }
-
-  function sendSpaIndex(res: express.Response): boolean {
-    if (!fs.existsSync(clientIndexPath)) {
-      return false;
-    }
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(clientIndexPath);
-    return true;
-  }
-
   app.get('/legal', publicPageLimiter, (_req, res) => {
-    sendLegalRedirect(res);
+    res.redirect(LEGAL_PAGE_URL);
   });
 
-  app.use(
-    '/assets',
-    staticAssetLimiter,
-    express.static(path.join(clientDir, 'assets'), {
-      maxAge: '1y',
-      immutable: true,
-    }),
-  );
-  app.use(
-    publicPageLimiter,
-    express.static(clientDir, {
-      index: false,
-      maxAge: '1h',
-      setHeaders(res, filePath) {
-        if (filePath.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'no-cache');
-        }
-      },
-    }),
-  );
-  app.use(publicPageLimiter, (req, res, next) => {
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      next();
-      return;
+  if (NODE_ENV !== 'development') {
+    const clientDir =
+      NODE_ENV !== 'production' && process.env.E2E_CLIENT_DIR?.trim()
+        ? path.resolve(process.env.E2E_CLIENT_DIR.trim())
+        : path.join(PROJECT_ROOT, 'dist', 'client');
+    const clientIndexPath = path.join(clientDir, 'index.html');
+
+    function sendSpaIndex(res: express.Response): boolean {
+      if (!fs.existsSync(clientIndexPath)) {
+        return false;
+      }
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(clientIndexPath);
+      return true;
     }
-    if (!sendSpaIndex(res)) {
-      res.status(503).json({ error: 'Client build missing. Run `pnpm run build` first.' });
-    }
-  });
+
+    app.use(
+      '/assets',
+      staticAssetLimiter,
+      express.static(path.join(clientDir, 'assets'), {
+        maxAge: '1y',
+        immutable: true,
+      }),
+    );
+    app.use(
+      publicPageLimiter,
+      express.static(clientDir, {
+        index: false,
+        maxAge: '1h',
+        setHeaders(res, filePath) {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
+          }
+        },
+      }),
+    );
+    app.use(publicPageLimiter, (req, res, next) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        next();
+        return;
+      }
+      if (!sendSpaIndex(res)) {
+        res.status(503).json({ error: 'Client build missing. Run `pnpm run build` first.' });
+      }
+    });
+  }
 
   app.use(errorHandler);
 

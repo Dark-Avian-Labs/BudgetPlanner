@@ -1,6 +1,6 @@
 # BudgetPlanner
 
-Shell, auth, env, and validate are in AppBase `AGENTS.md`. Port 3003. Playwright 3103. This app uses the compact shell: `max-w-3xl` and an `h-14` header.
+Shell, auth, env, and validate are in AppBase `AGENTS.md`. Port 3003. Playwright 3103. Signed-in Playwright 4103. This app uses the compact shell: `max-w-3xl` and an `h-14` header.
 
 Household budget. Clerk is identity only. Membership is `plan_members` in app SQLite, not Clerk Organizations.
 
