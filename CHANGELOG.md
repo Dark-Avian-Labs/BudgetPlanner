@@ -62,3 +62,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.9.0** `chore`: Merge pull request 'Replace the header feather and the soft wordmark glow' (#82) from feat/header-mark into main
 - **v1.9.1** `chore`: Merge pull request 'chore(deps): update dependencies to latest' (#87) from chore/deps-latest into main
 - **v1.9.2** `chore`: Merge pull request 'ci: rebuild dependency pull requests from an @actions rebase comment' (#90) from ci/actions-rebase into main
+- **v1.9.3** `chore`: Merge pull request 'ci: rebase dependency pull requests as Sayori' (#91) from ci/sayori-rebase into main
