@@ -61,3 +61,4 @@ bumps the version (from the merged PR title / squash commit message).
 - **v1.8.7** `chore`: Merge pull request 'ci: run checks on Forgejo' (#78) from ci/forgejo-workflows into main
 - **v1.9.0** `chore`: Merge pull request 'Replace the header feather and the soft wordmark glow' (#82) from feat/header-mark into main
 - **v1.9.1** `chore`: Merge pull request 'chore(deps): update dependencies to latest' (#87) from chore/deps-latest into main
+- **v1.9.2** `chore`: Merge pull request 'ci: rebuild dependency pull requests from an @actions rebase comment' (#90) from ci/actions-rebase into main
